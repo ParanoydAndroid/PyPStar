@@ -45,3 +45,6 @@ class PriorityQueue:
 
         # I'm not sure why I have to use a self. here, since I'm intentionally accessing a static variable.  ??
         node[1] = self.REMOVED
+
+    def empty(self):
+        return len(self.pq) == 0
