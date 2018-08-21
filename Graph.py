@@ -5,6 +5,7 @@ import networkx as nx
 import matplotlib.pyplot as plot
 
 
+
 # size = 15
 #
 # g = nx.gnp_random_graph(size, .1, 'test')
@@ -34,11 +35,18 @@ def get_google_graph():
     g = nx.read_adjlist(file)
 
     # we add weights just to make the graph more topologically interesting for project purposes
+    add_random_weight(g)
+    nx.set_node_attributes(g, False, 'visited')
+    nx.set_edge_attributes(g, False, 'visited')
+
+    return g
+
+
+def add_random_weight(g):
+    """Adds an int weight attribute from [0,10) to every edge in g"""
     random.seed('seed')
     for (u, v, w) in g.edges(data=True):
         w['weight'] = random.randint(0, 10)
-
-    return g
 
 
 def get_random_graph(size, seed=None):
@@ -50,6 +58,11 @@ def get_random_graph(size, seed=None):
     # nx...subgraphs returns an iterator over graphs that are disconnected in the forest.
     # and we just have to pick the largest subgraph as our own, where nx.number_of_nodes() defines 'largest'
     g = max(nx.connected_component_subgraphs(forest), key=nx.number_of_nodes)
+
+    # we add weights just to make the graph more topologically interesting for project purposes
+    add_random_weight(g)
+    nx.set_node_attributes(g, False, 'visited')
+    nx.set_edge_attributes(g, False, 'visited')
 
     return g
 
@@ -65,10 +78,21 @@ def draw(graph: nx.Graph, solution_nodes=()):
     pos = nx.spring_layout(graph)
 
     # we draw the whole graph with the default color
-    # then we redraw the path using different attributes
+    # then we redraw the path and visited nodes using different attributes
     # this avoids having to partition the graph if we wanted draw each only once
     nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=1)
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=1)
+
+    # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
+
+    visited_nodelist = [k for (k,v) in nx.get_node_attributes(graph, 'visited').items() if v == True]
+    print('visited_nodelist:', visited_nodelist)
+
+    visited_edgelist = [(a,b) for ((a,b),v) in nx.get_edge_attributes(graph, 'visited').items() if v == True]
+    print('visisted_edgelist', visited_edgelist)
+
+    nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=2)
+    nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=2)
 
     nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=4)
     nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=4)

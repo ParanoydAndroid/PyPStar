@@ -16,6 +16,7 @@ class PriorityQueue:
         self.counter = itertools.count()
         self.count = 0
 
+
     def push(self, id, priority=0):
         # because we can push an existing task with a new priority, we need to account for duplication
         if id in self.pqMap:
@@ -44,7 +45,10 @@ class PriorityQueue:
         node = self.pqMap.pop(id)
 
         # I'm not sure why I have to use a self. here, since I'm intentionally accessing a static variable.  ??
-        node[1] = self.REMOVED
+        node[2] = self.REMOVED
 
     def empty(self):
         return len(self.pq) == 0
+
+    def get_max_count(self):
+        return self.count
