@@ -42,15 +42,14 @@ def get_google_graph():
 
 
 def get_random_graph(size, seed=None):
-    """wrapper for NetworkX ERdos-Renyi random graph"""
-    edge_probability = .1
-    g = nx.fast_gnp_random_graph(size, edge_probability, seed)
+    """wrapper for NetworkX Erdos-Renyi random graph"""
+    edge_probability = .002
+    forest = nx.fast_gnp_random_graph(size, edge_probability, seed)
 
-    for id in list(g.nodes):
-
-        # remove node if its adjacency dictionary is empty; i.e. it has no edges
-        if not g[id]:
-            g.remove_node(id)
+    # we don't want a bunch of disconnected subgraphs, so we prune before returning
+    # nx...subgraphs returns an iterator over graphs that are disconnected in the forest.
+    # and we just have to pick the largest subgraph as our own, where nx.number_of_nodes() defines 'largest'
+    g = max(nx.connected_component_subgraphs(forest), key=nx.number_of_nodes)
 
     return g
 
@@ -63,25 +62,25 @@ def draw(graph: nx.Graph, solution_nodes=()):
     solution_edges = [(solution_nodes[i], solution_nodes[i + 1]) for i in range(len(solution_nodes) - 1)]
 
     # first we determine node spacing using a standard force model
-    pos = nx.spring_layout(graph, k=optimal_spacing)
+    pos = nx.spring_layout(graph)
 
     # we draw the whole graph with the default color
     # then we redraw the path using different attributes
     # this avoids having to partition the graph to draw each only once
-    nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=100)
-    nx.draw_networkx_edges(graph, pos, edge_color='r', width=1, )
+    nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=1)
+    nx.draw_networkx_edges(graph, pos, edge_color='r', width=1)
 
-    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=500)
-    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=2)
+    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=4)
+    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=3)
 
     plot.axis('off')
+    # add graph labels: number of nodes, number searched, number in final path, total iterations
     plot.show()
 
-
 def main():
-    size = 10000
-    graph_seed = 'test'
-    path_seed = 'maui'
+    size = 750
+    graph_seed = 'Maui'
+    path_seed = 'Ada'
     test(size, graph_seed, path_seed)
     exit()
 
@@ -98,6 +97,7 @@ def test(size, graph_seed, path_seed):
     print('source: ', source)
     print('target: ',  target)
     print('solution: ', fake_solutions)
+    print('Graph Size:', nx.number_of_nodes(g), 'solution size:', len(fake_solutions))
     draw(g, fake_solutions)
 
 
