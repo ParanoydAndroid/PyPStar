@@ -45,6 +45,13 @@ def get_random_graph(size, seed=None):
     """wrapper for NetworkX ERdos-Renyi random graph"""
     edge_probability = .1
     g = nx.fast_gnp_random_graph(size, edge_probability, seed)
+
+    for id in list(g.nodes):
+
+        # remove node if its adjacency dictionary is empty; i.e. it has no edges
+        if not g[id]:
+            g.remove_node(id)
+
     return g
 
 
@@ -70,6 +77,29 @@ def draw(graph: nx.Graph, solution_nodes=()):
     plot.axis('off')
     plot.show()
 
-if __name__ == '__main__':
-    g = get_random_graph(30, 'test')
-    draw(g)
+
+def main():
+    size = 10000
+    graph_seed = 'test'
+    path_seed = 'maui'
+    test(size, graph_seed, path_seed)
+    exit()
+
+
+def get_random_node(g):
+    return random.choice(list(g.nodes))
+
+
+def test(size, graph_seed, path_seed):
+    g = get_random_graph(size, graph_seed)
+    random.seed(path_seed)
+    source, target = get_random_node(g), get_random_node(g)
+    fake_solutions = nx.astar_path(g, source, target)
+    print('source: ', source)
+    print('target: ',  target)
+    print('solution: ', fake_solutions)
+    draw(g, fake_solutions)
+
+
+main()
+
