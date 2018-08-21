@@ -1,33 +1,17 @@
 import random
 from math import sqrt
+import time
 
 import networkx as nx
 import matplotlib.pyplot as plot
 
 
-
-# size = 15
-#
-# g = nx.gnp_random_graph(size, .1, 'test')
-#
-# random.seed('seed')
-# for (u, v, w) in g.edges(data=True):
-#     w['weight'] = random.randint(0, 10)
-#
-# nonpath = [(u, v) for (u, v, d) in g.edges(data=True) if d['weight'] <= 8]
-# path = [(u, v) for (u, v, d) in g.edges(data=True) if d['weight'] > 8]
-#
-# optimal_spacing = 3/sqrt(size)
-#
-# pos = nx.spring_layout(g, k=optimal_spacing)
-#
-# nx.draw_networkx_nodes(g, pos, node_size=300)
-# nx.draw_networkx_edges(g, pos, edgelist=path, width=2, edge_color='r')
-# nx.draw_networkx_edges(g, pos, edgelist=nonpath, width=2, edge_color='b')
-#
-# plot.axis('off')
-# plot.show()
-# print(g.adj)
+def main():
+    size = 1500
+    graph_seed = 'Maui'
+    path_seed = 'Ada'
+    test(size, graph_seed, path_seed)
+    exit()
 
 
 def get_google_graph():
@@ -42,16 +26,9 @@ def get_google_graph():
     return g
 
 
-def add_random_weight(g):
-    """Adds an int weight attribute from [0,10) to every edge in g"""
-    random.seed('seed')
-    for (u, v, w) in g.edges(data=True):
-        w['weight'] = random.randint(0, 10)
-
-
 def get_random_graph(size, seed=None):
     """wrapper for NetworkX Erdos-Renyi random graph"""
-    edge_probability = .002
+    edge_probability = .003
     forest = nx.fast_gnp_random_graph(size, edge_probability, seed)
 
     # we don't want a bunch of disconnected subgraphs, so we prune before returning
@@ -67,50 +44,71 @@ def get_random_graph(size, seed=None):
     return g
 
 
-def draw(graph: nx.Graph, solution_nodes=()):
-    optimal_spacing = 3 / sqrt(graph.number_of_nodes())
+def get_barabasi_graph(size, num_edges, seed=None):
+    forest = nx.barabasi_albert_graph(size, num_edges, seed)
 
+    g = max(nx.connected_component_subgraphs(forest), key=nx.number_of_nodes)
+
+    add_random_weight(g)
+    nx.set_edge_attributes(g, False, 'visited')
+    nx.set_node_attributes(g, False, 'visited')
+
+    return g
+
+
+def draw(graph: nx.Graph, solution_nodes=()):
     # default types must be immutable, but we want a list to work on
     solution_nodes = list(solution_nodes)
+
+    # edges are just tuples of adjaccent nodes, and our solution path by definition stores adjacent nodes
     solution_edges = [(solution_nodes[i], solution_nodes[i + 1]) for i in range(len(solution_nodes) - 1)]
 
-    # first we determine node spacing using a standard force model
-    pos = nx.spring_layout(graph)
+    # nodelist grabbing our source and target
+    # TODO: consider refactoring to take a search object instead of a graph object
+    goals = [solution_nodes[0], solution_nodes[len(solution_nodes) - 1]]
+    print("goals:", goals)
+
+    # first we determine node spacing using an extra relaxed standard force model; the chill layout
+
+    pos = nx.spring_layout(graph, k=1, iterations=100)
+    # pos = nx.circular_layout(graph)
 
     # we draw the whole graph with the default color
-    # then we redraw the path and visited nodes using different attributes
-    # this avoids having to partition the graph if we wanted draw each only once
-    nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=1)
-    nx.draw_networkx_edges(graph, pos, edge_color='r', width=1)
+    # then we redraw the path, goal and visited sets using different attributes
+    nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=.5)
+    nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
+    visited_nodelist = [k for (k,v) in nx.get_node_attributes(graph, 'visited').items() if v]
+    visited_edgelist = [(a,b) for ((a,b),v) in nx.get_edge_attributes(graph, 'visited').items() if v]
 
-    visited_nodelist = [k for (k,v) in nx.get_node_attributes(graph, 'visited').items() if v == True]
-    print('visited_nodelist:', visited_nodelist)
+    nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=.5)
+    nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=1)
 
-    visited_edgelist = [(a,b) for ((a,b),v) in nx.get_edge_attributes(graph, 'visited').items() if v == True]
-    print('visisted_edgelist', visited_edgelist)
+    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=2)
+    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=1)
 
-    nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=2)
-    nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=2)
-
-    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=4)
-    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=4)
+    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='g', node_size=8)
 
     plot.axis('off')
-    # add graph labels: number of nodes, number searched, number in final path, total iterations
-    plot.show()
 
-def main():
-    size = 750
-    graph_seed = 'Maui'
-    path_seed = 'Ada'
-    test(size, graph_seed, path_seed)
-    exit()
+    # TODO: add graph labels: number of nodes, number searched, number in final path, total iterations
+
+    # thank you SO for the timestamp formatting code:
+    # https://stackoverflow.com/questions/10607688/how-to-create-a-file-name-with-the-current-date-time-in-python
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    plot.savefig("figure{}.png".format(timestr), dpi=1500)
 
 
 def get_random_node(g):
     return random.choice(list(g.nodes))
+
+
+def add_random_weight(g):
+    """Adds an int weight attribute from [0,10) to every edge in g"""
+    random.seed('seed')
+    for (u, v, w) in g.edges(data=True):
+        w['weight'] = random.randint(0, 10)
 
 
 def test(size, graph_seed, path_seed):
@@ -125,5 +123,6 @@ def test(size, graph_seed, path_seed):
     draw(g, fake_solutions)
 
 
-# main()
+if __name__ == '__main__':
+    main()
 
