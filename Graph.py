@@ -1,5 +1,4 @@
 import random
-from math import sqrt
 import time
 
 import networkx as nx
@@ -79,8 +78,8 @@ def draw(graph: nx.Graph, solution_nodes=()):
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
-    visited_nodelist = [k for (k,v) in nx.get_node_attributes(graph, 'visited').items() if v]
-    visited_edgelist = [(a,b) for ((a,b),v) in nx.get_edge_attributes(graph, 'visited').items() if v]
+    visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
+    visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
 
     nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=1)
@@ -125,4 +124,3 @@ def test(size, graph_seed, path_seed):
 
 if __name__ == '__main__':
     main()
-

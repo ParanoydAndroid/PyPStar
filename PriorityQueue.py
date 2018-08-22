@@ -16,7 +16,6 @@ class PriorityQueue:
         self.counter = itertools.count()
         self.count = 0
 
-
     def push(self, id, priority=0):
         # because we can push an existing task with a new priority, we need to account for duplication
         if id in self.pqMap:
@@ -37,7 +36,7 @@ class PriorityQueue:
 
             if node_id is not self.REMOVED:
                 del self.pqMap[node_id]
-                return node_id
+                return priority, node_id
 
     def remove(self, id):
 
