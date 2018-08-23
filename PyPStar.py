@@ -234,8 +234,8 @@ class Search:
         # using 'with' to ensure shared memory closes after we exit the scope
         with Manager() as mgr:
             # {nodeID: cost} dicts so our two branches can share their path information
-            s_visited = mgr.dict()
-            t_visited = mgr.dict()
+            s_visited_node_costs = mgr.dict()
+            t_visited_node_costs = mgr.dict()
 
             # manager has to coordinate the shortest expected length of the total path
             mu = float('inf')
@@ -249,32 +249,33 @@ class Search:
             barrier = mgr.Barrier(2)
 
             # Again, not necessary for the code, but used later for report and analysis
-            metrics = mgr.dict()
+            visited_edges = mgr.dict()
 
             # Even though we're passing the self object, we need to pass source and target in explicitly.
             # This is so that our manager class can reverse them for the backwards search.
             # Otherwise both searches would use the same path
             s_p = Process(target=self._B_star_runner, args=(self.source,
                                                             self.target,
-                                                            s_visited,
-                                                            t_visited,
+                                                            s_visited_node_costs,
+                                                            t_visited_node_costs,
                                                             mu_list,
                                                             resultsq,
                                                             barrier,
-                                                            metrics))
+                                                            visited_edges))
 
             t_p = Process(target=self._B_star_runner, args=(self.target,
                                                             self.source,
-                                                            t_visited,
-                                                            s_visited,
+                                                            t_visited_node_costs,
+                                                            s_visited_node_costs,
                                                             mu_list,
                                                             resultsq,
                                                             barrier,
-                                                            metrics))
+                                                            visited_edges))
 
             s_p.start()
             t_p.start()
             s_p.join()
+
             t_p.join()
 
             parents = []
@@ -297,12 +298,12 @@ class Search:
             # print('s thread: {}'.format(s_parents))
             # print('t thread: {}'.format(t_parents))
             # print('intersection:', set(s_parents.keys()) & set(t_parents.keys()))
-            self.path = self._splice_path(s_parents, t_parents, s_visited, t_visited)
+            self.path = self._splice_path(s_parents, t_parents, s_visited_node_costs, t_visited_node_costs)
 
-            nx.set_edge_attributes(self.graph, metrics['s'])
-            nx.set_edge_attributes(self.graph, metrics['t'])
+            nx.set_edge_attributes(self.graph, visited_edges['s'])
+            nx.set_edge_attributes(self.graph, visited_edges['t'])
 
-            print('metrics: {}'.format(metrics))
+            print('Path successfully spliced')
             return self.path
 
 
@@ -342,11 +343,11 @@ def test_grid(size, graph_seed, path_seed):
 
     g_path = search.A_star()
     b_path = search.bilateral_A_star()
-    pos = nx.spring_layout(g, iterations=100)
+    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
     # nx.draw(g, pos, with_labels=True)
     Graph.draw(g, pos, b_path)
     labels = nx.get_edge_attributes(g, 'weight')
-    nx.draw_networkx_edge_labels(g, pos, edge_labels=labels)
+    nx.draw_networkx_edge_labels(g, pos, edge_labels=labels, font_size=8)
     plt.axis('off')
 
     timestr = time.strftime("%Y%m%d-%H%M%S")

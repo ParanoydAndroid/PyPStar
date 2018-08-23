@@ -65,17 +65,17 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
     # default types must be immutable, but we want a list to work on
     solution_nodes = list(solution_nodes)
 
-    # edges are just tuples of adjaccent nodes, and our solution path by definition stores adjacent nodes
+    # edges are just tuples of adjacent nodes, and our solution path by definition stores adjacent nodes
     solution_edges = [(solution_nodes[i], solution_nodes[i + 1]) for i in range(len(solution_nodes) - 1)]
 
-    # nodelist grabbing our source and target
-    # TODO: consider refactoring to take a search object instead of a graph object
     goals = [solution_nodes[0], solution_nodes[-1]]
+    goal_labels = {}
+    goal_labels[goals[0]] = 'S'
+    goal_labels[goals[1]] = 'T'
     print("goals:", goals)
 
-
-    # we draw the whole graph with the default color
-    # then we redraw the path, goal and visited sets using different attributes
+    # We draw the whole graph with the default color.
+    # Then we redraw the path, goal and visited sets using different attributes.
     nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
 
@@ -84,20 +84,34 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
 
     visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]
     visited_t_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 't_visited').items() if v]
-    visited_both_nodelist = list(set(visited_s_nodelist) & set(visited_t_nodelist))
 
     if not visited_t_nodelist:
+        # There is nothing in the t_noddelist, which tells us we ran a single A*.
         visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
         nx.draw_networkx_nodes(graph, pos, nodelist=visited_s_nodelist, node_color='b', node_size=.5)
         nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='b', width=1)
     else:
+        visited_both_nodelist = list(set(visited_s_nodelist) & set(visited_t_nodelist))
         nx.draw_networkx_nodes(graph, pos, nodelist=visited_s_nodelist, node_color='b', node_size=.5)
         nx.draw_networkx_nodes(graph, pos, nodelist=visited_t_nodelist, node_color='y', node_size=.5)
         nx.draw_networkx_nodes(graph, pos, nodelist=visited_both_nodelist, node_color='g', node_size=.5)
 
+        visited_s_edgelist = [k for (k, v) in nx.get_edge_attributes(graph, 's_visited').items() if v]
+        visited_t_edgelist = [k for (k, v) in nx.get_edge_attributes(graph, 't_visited').items() if v]
+        visited_both_edgelist = list(set(visited_s_edgelist) & set(visited_t_edgelist))
+
+        nx.draw_networkx_edges(graph, pos, edgelist=visited_s_edgelist, edge_color='b', width=1)
+        nx.draw_networkx_edges(graph, pos, edgelist=visited_t_edgelist, edge_color='y', width=1)
+        nx.draw_networkx_edges(graph, pos, edgelist=visited_both_edgelist, edge_color='g', width=1)
+
     nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='k', node_size=2)
     nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='k', width=1)
-    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=10)
+    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=40)
+
+    # Offset the label position so they aren't directly on the nodes
+    # for p in pos:
+    #     pos[p][1] -= 0.07
+    nx.draw_networkx_labels(graph, pos, goal_labels, font_size=10)
 
     plot.axis('off')
 
@@ -116,8 +130,12 @@ def get_random_node(g):
 def add_random_weight(g):
     """Adds an int weight attribute from [0,10) to every edge in g"""
     random.seed('seed')
+
+    # Spring layouts give longer visual paths to lower weights, and I want to invert that
+    max_weight = 10
     for (u, v, w) in g.edges(data=True):
         w['weight'] = random.randint(1, 10)
+        w['i_weight'] = max_weight - w['weight'] + 1
 
 
 def test(size, graph_seed, path_seed):
