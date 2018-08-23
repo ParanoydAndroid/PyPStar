@@ -1,6 +1,7 @@
-import math
+import dill as pickle
 from multiprocessing import Process, Manager
 import random
+from multiprocessing.spawn import freeze_support
 
 import networkx as nx
 
@@ -9,14 +10,20 @@ import Graph
 
 
 # TODO: possible use random.getstate(), pickled, then recovered with random.setState to ensure I get repeatable tests
+def h_test_out(x, y):
+    return 1
+
 
 class Search:
     """Class to access traversal methods on a networkX graph.  In particular single and parallel A* searches"""
 
+    def h_test_in(self, x, y):
+        return 1
+
     # because not all graphs are conducive to the same heuristic, we allow the caller to pass their own on instantiation
     # in the event they don't, we have an anonymous constant function that converts the algo to Dijkstra's
     # Passed in heuristic_func must accept two node parameters and must return a number > 0
-    def __init__(self, graph: nx.Graph, source, target, heuristic_func=lambda x, y: 1):
+    def __init__(self, graph: nx.Graph, source, target, heuristic_func=h_test_out):
 
         self.graph = graph
         self.source = source
@@ -186,8 +193,9 @@ class Search:
             t_visited = mgr.dict()
 
             # manager has to coordinate the shortest expected length of the total path
-            mu = math.inf
-            mu_list = mgr.list(mu)
+            mu = float('inf')
+            mu_list = mgr.list()
+            mu_list.append(mu)
 
             # To gather the two final paths determined to contain the right total path
             resultsq = mgr.Queue
@@ -238,6 +246,9 @@ class Search:
             return self.path
 
 
+
+
+
 def test(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
@@ -272,4 +283,9 @@ def main():
     test(size, graph_seed, path_seed)
 
 
-main()
+if __name__ == '__main__':
+    freeze_support()
+    print("in main:", __name__)
+    main()
+else:
+    print("out of main:", __name__)
