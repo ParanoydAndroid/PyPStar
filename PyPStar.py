@@ -1,7 +1,5 @@
-import dill as pickle
 from multiprocessing import Process, Manager
 import random
-from multiprocessing.spawn import freeze_support
 
 import networkx as nx
 
@@ -99,8 +97,8 @@ class Search:
 
         # There may be many potential paths in our data set.
         # First we find mutually explored nodes
-        s_touched = set(s_parents.keys)
-        t_touched = set(t_parents.keys)
+        s_touched = set(s_parents.keys())
+        t_touched = set(t_parents.keys())
         mutual_set = s_touched & t_touched
         mutual_costs = []
 
@@ -154,7 +152,7 @@ class Search:
 
                 # We have found the shortest path and we want to break and break our partner as well.
                 # First we'll permanently save the right value then set a poison pill.
-                mu_list[1] = mu_list[0]
+                mu_list.appen(mu)
                 mu_list[0] = 0
                 break
 
@@ -198,21 +196,19 @@ class Search:
             mu_list.append(mu)
 
             # To gather the two final paths determined to contain the right total path
-            resultsq = mgr.Queue
+            resultsq = mgr.Queue()
 
             # Even though we're passing the self object, we need to pass source and target in explicitly.
             # This is so that our manager class can reverse them for the backwards search.
             # Otherwise both searches would use the same path
-            s_p = Process(target=self._B_star_runner, args=(self,
-                                                            self.source,
+            s_p = Process(target=self._B_star_runner, args=(self.source,
                                                             self.target,
                                                             s_visited,
                                                             t_visited,
                                                             mu_list,
                                                             resultsq))
 
-            t_p = Process(target=self._B_star_runner, args=(self,
-                                                            self.target,
+            t_p = Process(target=self._B_star_runner, args=(self.target,
                                                             self.source,
                                                             t_visited,
                                                             s_visited,
@@ -224,29 +220,26 @@ class Search:
             s_p.join()
             t_p.join()
 
-            costs = []
+            parents = []
             while not resultsq.empty():
-                costs.append(resultsq.get)  # blocks
+                parents.append(resultsq.get())  # blocks
 
-            if len(costs) != 2:
-                raise ChildProcessError('Received unexpected number of results: {}: {}'.format(len(costs), costs))
+            if len(parents) != 2:
+                raise ChildProcessError('Received unexpected number of results: {}: {}'.format(len(parents), parents))
 
             # Now we have to figure out which dict is which
 
-            if self.source in costs[0]:
-                s_costs = costs[0]
-                t_costs = costs[1]
+            if self.source in parents[0]:
+                s_parents = parents[0]
+                t_parents = parents[1]
             else:
-                s_costs = costs[1]
-                t_costs = costs[0]
+                s_parents = parents[1]
+                t_parents = parents[0]
 
             # Now we need to pass all our information into a function to actual get us a path to return
-            self.path = self._splice_path(s_visited, t_visited, s_costs, t_costs)
+            self.path = self._splice_path(s_parents, t_parents, s_visited, t_visited)
 
             return self.path
-
-
-
 
 
 def test(size, graph_seed, path_seed):
@@ -276,7 +269,7 @@ def test(size, graph_seed, path_seed):
 
 
 def main():
-    size = 500
+    size = 3000
     graph_seed = 'Maui1'
     path_seed = 'Ada1'
 
@@ -284,7 +277,6 @@ def main():
 
 
 if __name__ == '__main__':
-    freeze_support()
     print("in main:", __name__)
     main()
 else:
