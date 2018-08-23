@@ -34,8 +34,7 @@ class Search:
         open_nodes = pq.PriorityQueue()
         open_nodes.push(self.source, 0)
 
-        parents = self.s_parents
-        parents[self.source] = None
+        parents = {self.source: None}
 
         # Map representing g(x) in the standard f(x) = g(x) + h(x) A* cost function.
         g = {self.source: 0}
@@ -245,17 +244,22 @@ def test(size, graph_seed, path_seed):
     source, target = Graph.get_random_node(g), Graph.get_random_node(g)
 
     search = Search(g, source, target)
-    search.A_star()
+    b_search = Search(g, source, target)
 
-    fake_solutions = nx.astar_path(g, source, target)
-    real_solutions = search._create_path()
+    # fake_solutions = nx.astar_path(g, source, target)
+    real_solutions = search.A_star()
+    bilat_solutions = b_search.bilateral_A_star()
 
     print('source: ', source)
     print('target: ', target)
-    print('library solution: ', fake_solutions)
-    print('My solution: ', real_solutions)
-    print('Graph Size:', nx.number_of_nodes(g), 'fake size:', len(fake_solutions), 'real size: ', len(real_solutions))
-    print('visited nodes:', search.metrics['nodes_explored'])
+    # print('library solution: ', fake_solutions)
+    print('My Single solution: ', real_solutions)
+    print('My grade and life at this moment:', bilat_solutions)
+    print('Graph Size: {}, single vs double size: {} - {}'.format(nx.number_of_nodes(g),
+                                                                  len(real_solutions),
+                                                                  len(bilat_solutions)))
+    print('Single Metrics: {}'.format(search.metrics))
+    print('Bilat Metrics: {}'.format(b_search.metrics))
 
     Graph.draw(g, real_solutions)
 
