@@ -104,13 +104,13 @@ class Search:
 
         # After we return from this function, we won't know which search found which elements of the path.
         # So we set that information now while we construct the path.
-        # nx.set_node_attributes(self.graph, {node: {'visited': True}})
-        # nx.set_edge_attributes(self.graph, {(node, current): {'visited': True}})
 
-        # TODO: Keep working up here to set the nodes properly.
         # I have no idea how to set the edges at this moment.
-        zip(s_costs.keys(), {'s_visited': True})
-        zip(t_costs.keys(), {'t_visited': True})
+        s_visiteds = dict(zip(s_costs.keys(), {'s_visited': True}))
+        t_visiteds = dict(zip(t_costs.keys(), {'t_visited': True}))
+
+        nx.set_node_attributes(self.graph, s_visiteds)
+        nx.set_node_attributes(self.graph, t_visiteds)
 
         # There may be many potential paths in our data set.
         # First we find mutually explored nodes
@@ -284,13 +284,12 @@ def test(size, graph_seed, path_seed):
     search = Search(g, source, target)
     b_search = Search(g, source, target)
 
-    # fake_solutions = nx.astar_path(g, source, target)
     real_solutions = search.A_star()
     bilat_solutions = b_search.bilateral_A_star()
 
     print('source: ', source)
     print('target: ', target)
-    # print('library solution: ', fake_solutions)
+
     print('My Single solution: ', real_solutions)
     print('My grade and life at this moment:', bilat_solutions)
     print('Graph Size: {}, single vs double size: {} - {}'.format(nx.number_of_nodes(g),

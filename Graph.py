@@ -80,17 +80,25 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
-    visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
-    visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
+    # visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
+    #
 
-    # TODO: Refactor this to check for certain labels and, if present, to write them (visited a and visited b)
-    nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=.5)
-    nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=1)
+    visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]
+    visited_t_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 't_visited').items() if v]
+    visited_both_nodelist = [set(visited_s_nodelist) & set(visited_t_nodelist)]
 
-    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='b', node_size=2)
-    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='b', width=1)
+    if not visited_t_nodelist:
+        visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
+        nx.draw_networkx_nodes(graph, pos, nodelist=visited_s_nodelist, node_color='b', node_size=.5)
+        nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='b', width=1)
+    else:
+        nx.draw_networkx_nodes(graph, pos, nodelist=visited_s_nodelist, node_color='b', node_size=.5)
+        nx.draw_networkx_nodes(graph, pos, nodelist=visited_t_nodelist, node_color='y', node_size=.5)
+        nx.draw_networkx_nodes(graph, pos, nodelist=visited_both_nodelist, node_color='g', node_size=.5)
 
-    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='g', node_size=8)
+    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='k', node_size=2)
+    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='k', width=1)
+    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=10)
 
     plot.axis('off')
 
