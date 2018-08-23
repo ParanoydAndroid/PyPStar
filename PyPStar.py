@@ -1,7 +1,9 @@
 from multiprocessing import Process, Manager
 import random
 from os import getpid
+import time
 
+import matplotlib.pyplot as plt
 import networkx as nx
 
 import PriorityQueue as pq
@@ -125,11 +127,13 @@ class Search:
 
         # Begin the last half of the path.  Note we start with the parent, since the key_tile has already been added.
         current = t_parents[key_tile]
-        while current != self.target:
+        while current != self.target and current is not None:
             path.append(current)
             current = t_parents[current]
 
-        path.append(self.target)
+        # For small graphs, sometimes one process finds the whole path, so this will end up being redundant
+        if path[-1] != self.target:
+            path.append(self.target)
 
         self.metrics['path_length'] = len(path)
         return path
@@ -259,6 +263,11 @@ class Search:
             return self.path
 
 
+def grid_h(s_node, t_node):
+    # Get coords for given nodes
+    return 1
+
+
 def test(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
@@ -285,12 +294,38 @@ def test(size, graph_seed, path_seed):
     # Graph.draw(g, real_solutions)
 
 
+def test_grid(size, graph_seed, path_seed):
+    g = Graph.get_grid_graph(size)
+    Graph.add_random_weight(g)
+    g2 = Graph.get_random_graph(500, graph_seed)
+    g3 = nx.convert_node_labels_to_integers(g)
+    random.seed(path_seed)
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    search = Search(g, source, target, grid_h)
+
+    g_path = search.A_star()
+    b_path = search.bilateral_A_star()
+    pos = nx.spring_layout(g, iterations=100)
+    nx.draw(g, pos, with_labels=True)
+    labels = nx.get_edge_attributes(g, 'weight')
+    nx.draw_networkx_edge_labels(g, pos, edge_labels=labels)
+    plt.axis('off')
+
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    plt.savefig("figure{}.png".format(timestr), dpi=1500)
+    print('nodes:{}'.format(g.nodes))
+    print('g2 nodes: {}'.format(g2.nodes))
+    print('g3 nodes: {}'.format(g3.nodes))
+    print('path: {}, b_path: {}'.format(g_path, b_path))
+
+
 def main():
     size = 3000
     graph_seed = 'Maui1'
     path_seed = 'Ada1'
 
-    test(size, graph_seed, path_seed)
+    # test(size, graph_seed, path_seed)
+    test_grid(5, graph_seed, path_seed)
     exit(0)
 
 

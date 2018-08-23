@@ -43,6 +43,12 @@ def get_random_graph(size, seed=None):
     return g
 
 
+def get_grid_graph(size):
+    g = nx.grid_2d_graph(size, size)
+
+    return g
+
+
 def get_barabasi_graph(size, num_edges, seed=None):
     forest = nx.barabasi_albert_graph(size, num_edges, seed)
 
