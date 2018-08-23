@@ -8,7 +8,7 @@ import PriorityQueue as pq
 import Graph
 
 
-# TODO: possible use random.getstate(), pickled, then recovered with random.setState to ensure I get repeatable tests
+# TODO: Update to use correct h function only.
 def h_test_out(x, y):
     return 1
 
