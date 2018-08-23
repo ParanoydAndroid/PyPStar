@@ -85,14 +85,47 @@ class Search:
 
         path.append(self.source)
         path.reverse()
-        # error catch some stuff
+
         return path
 
     def _splice_path(self, s_parents, t_parents, s_costs, t_costs):
         """ Recreates a s->t path from a bilateral search returning dicts of s_parents from s->n and n<-t searches"""
 
         # There may be many potential paths in our data set.
-        # First we find a jointly touched midpoint for a small path
+        # First we find mutually explored nodes
+        s_touched = set(s_parents.keys)
+        t_touched = set(t_parents.keys)
+        mutual_set = s_touched & t_touched
+        mutual_costs = []
+
+        # Then we calculate the path lengths through each one of them from both ends
+        for node in mutual_set:
+            path_length = s_costs[node] + t_costs[node]
+            mutual_costs.append((node, path_length))
+
+        key_tile, min_path = min(mutual_costs)
+        self.metrics['path_cost'] = min_path
+        self.metrics['nodes_explored'] = len(s_costs) + len(t_costs)
+        print('Key tile, min_path:', key_tile, ",", min_path)
+
+        path = []
+        current = key_tile
+        while current != self.source:
+            # I don't feel right about appending and reversing the first half of the list, like it might go wrong ...
+            # Instead we push in reverse.
+            path.insert(0, current)
+            current = s_parents[current]
+
+        path.insert(0, self.source)
+
+        # Begin the last half of the path.  Note we start with the parent, since the key_tile has already been added.
+        current = t_parents[key_tile]
+        while current != self.target:
+            path.append(current)
+            current = t_parents[current]
+
+        self.metrics['path_length'] = len(path)
+        return path
 
     def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq):
         open_nodes = pq.PriorityQueue()
