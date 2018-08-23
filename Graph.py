@@ -61,7 +61,7 @@ def get_barabasi_graph(size, num_edges, seed=None):
     return g
 
 
-def draw(graph: nx.Graph, solution_nodes=()):
+def draw(graph: nx.Graph, pos, solution_nodes=()):
     # default types must be immutable, but we want a list to work on
     solution_nodes = list(solution_nodes)
 
@@ -70,13 +70,9 @@ def draw(graph: nx.Graph, solution_nodes=()):
 
     # nodelist grabbing our source and target
     # TODO: consider refactoring to take a search object instead of a graph object
-    goals = [solution_nodes[0], solution_nodes[len(solution_nodes) - 1]]
+    goals = [solution_nodes[0], solution_nodes[-1]]
     print("goals:", goals)
 
-    # first we determine node spacing using an extra relaxed standard force model; the chill layout
-
-    pos = nx.spring_layout(graph, k=1, iterations=100)
-    # pos = nx.circular_layout(graph)
 
     # we draw the whole graph with the default color
     # then we redraw the path, goal and visited sets using different attributes
@@ -87,6 +83,7 @@ def draw(graph: nx.Graph, solution_nodes=()):
     visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
     visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
 
+    # TODO: Refactor this to check for certain labels and, if present, to write them (visited a and visited b)
     nx.draw_networkx_nodes(graph, pos, nodelist=visited_nodelist, node_color='k', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='k', width=1)
 
@@ -101,8 +98,8 @@ def draw(graph: nx.Graph, solution_nodes=()):
 
     # thank you SO for the timestamp formatting code:
     # https://stackoverflow.com/questions/10607688/how-to-create-a-file-name-with-the-current-date-time-in-python
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    plot.savefig("figure{}.png".format(timestr), dpi=1500)
+    # timestr = time.strftime("%Y%m%d-%H%M%S")
+    # plot.savefig("figure{}.png".format(timestr), dpi=1500)
 
 
 def get_random_node(g):
@@ -113,7 +110,7 @@ def add_random_weight(g):
     """Adds an int weight attribute from [0,10) to every edge in g"""
     random.seed('seed')
     for (u, v, w) in g.edges(data=True):
-        w['weight'] = random.randint(0, 10)
+        w['weight'] = random.randint(1, 10)
 
 
 def test(size, graph_seed, path_seed):

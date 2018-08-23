@@ -1,3 +1,4 @@
+from math import sqrt
 from multiprocessing import Process, Manager
 import random
 from os import getpid
@@ -10,21 +11,25 @@ import PriorityQueue as pq
 import Graph
 
 
-# TODO: Update to use correct h function only.
-def h_test_out(x, y):
+def grid_h(s_node, t_node):
+    # Get coords for given nodes
+    x0, y0 = s_node
+    x1, y1 = t_node
+
+    return abs(x0 - x1) + abs(y0 - y1)
+
+
+def h_djikstra(x, y):
     return 1
 
 
 class Search:
     """Class to access traversal methods on a networkX graph.  In particular single and parallel A* searches"""
 
-    def h_test_in(self, x, y):
-        return 1
-
     # because not all graphs are conducive to the same heuristic, we allow the caller to pass their own on instantiation
     # in the event they don't, we have an anonymous constant function that converts the algo to Dijkstra's
     # Passed in heuristic_func must accept two node parameters and must return a number > 0
-    def __init__(self, graph: nx.Graph, source, target, heuristic_func=h_test_out):
+    def __init__(self, graph: nx.Graph, source, target, heuristic_func=h_djikstra):
 
         self.graph = graph
         self.source = source
@@ -61,10 +66,9 @@ class Search:
                 # Setting these node attributes is not necessary for the actual search
                 # but we use these attributes in draw for later analysis
 
+                # TODO: Change this to a new attribute name
                 nx.set_node_attributes(self.graph, {node: {'visited': True}})
-                # self.graph.nodes[node]['visited'] = True
                 nx.set_edge_attributes(self.graph, {(node, current): {'visited': True}})
-                # self.graph.edges[current][node]['visited'] = True
 
                 # this second condition is required for thread-safing
                 # but since we're already rechecking for shorter paths, we no longer need to be concerned
@@ -98,6 +102,16 @@ class Search:
     def _splice_path(self, s_parents, t_parents, s_costs, t_costs):
         """ Recreates a s->t path from a bilateral search returning dicts of s_parents from s->n and n<-t searches"""
 
+        # After we return from this function, we won't know which search found which elements of the path.
+        # So we set that information now while we construct the path.
+        # nx.set_node_attributes(self.graph, {node: {'visited': True}})
+        # nx.set_edge_attributes(self.graph, {(node, current): {'visited': True}})
+
+        # TODO: Keep working up here to set the nodes properly.
+        # I have no idea how to set the edges at this moment.
+        zip(s_costs.keys(), {'s_visited': True})
+        zip(t_costs.keys(), {'t_visited': True})
+
         # There may be many potential paths in our data set.
         # First we find mutually explored nodes
         s_touched = set(s_parents.keys())
@@ -113,7 +127,6 @@ class Search:
         min_path, key_tile = min(mutual_costs)
         self.metrics['path_cost'] = min_path
         self.metrics['nodes_explored'] = len(s_costs) + len(t_costs)
-        print('Key tile, min_path:', key_tile, ",", min_path)
 
         path = []
         current = key_tile
@@ -263,11 +276,6 @@ class Search:
             return self.path
 
 
-def grid_h(s_node, t_node):
-    # Get coords for given nodes
-    return 1
-
-
 def test(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
@@ -306,7 +314,8 @@ def test_grid(size, graph_seed, path_seed):
     g_path = search.A_star()
     b_path = search.bilateral_A_star()
     pos = nx.spring_layout(g, iterations=100)
-    nx.draw(g, pos, with_labels=True)
+    # nx.draw(g, pos, with_labels=True)
+    Graph.draw(g, pos, b_path)
     labels = nx.get_edge_attributes(g, 'weight')
     nx.draw_networkx_edge_labels(g, pos, edge_labels=labels)
     plt.axis('off')
@@ -317,15 +326,15 @@ def test_grid(size, graph_seed, path_seed):
     print('g2 nodes: {}'.format(g2.nodes))
     print('g3 nodes: {}'.format(g3.nodes))
     print('path: {}, b_path: {}'.format(g_path, b_path))
-
+    print('lengths {} - {}'.format(len(g_path), len(b_path)))
 
 def main():
-    size = 3000
+    size = 36
     graph_seed = 'Maui1'
     path_seed = 'Ada1'
 
     # test(size, graph_seed, path_seed)
-    test_grid(5, graph_seed, path_seed)
+    test_grid(int(sqrt(size)), graph_seed, path_seed)
     exit(0)
 
 
