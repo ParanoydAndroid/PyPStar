@@ -1,5 +1,6 @@
 from multiprocessing import Process, Manager
 import random
+from os import getpid
 
 import networkx as nx
 
@@ -132,6 +133,7 @@ class Search:
         return path
 
     def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq):
+        # Install process barrier from Manager here
         open_nodes = pq.PriorityQueue()
         open_nodes.push(source, 0)
 
@@ -144,6 +146,7 @@ class Search:
             # note we're accessing a manager proxy to the list, not the proxy directly
             # process safety isn't just a good idea; it's the LAW.
             mu = mu_list[0]
+            print('mu in thread {}'.format(getpid()), mu)
             if priority > mu:
 
                 # If mu has been set to 0 by our partner, we just leave
@@ -152,7 +155,7 @@ class Search:
 
                 # We have found the shortest path and we want to break and break our partner as well.
                 # First we'll permanently save the right value then set a poison pill.
-                mu_list.appen(mu)
+                mu_list.append(mu)
                 mu_list[0] = 0
                 break
 
@@ -274,6 +277,7 @@ def main():
     path_seed = 'Ada1'
 
     test(size, graph_seed, path_seed)
+    exit(0)
 
 
 if __name__ == '__main__':
