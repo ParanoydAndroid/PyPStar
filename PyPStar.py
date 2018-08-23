@@ -106,9 +106,9 @@ class Search:
         # Then we calculate the path lengths through each one of them from both ends
         for node in mutual_set:
             path_length = s_costs[node] + t_costs[node]
-            mutual_costs.append((node, path_length))
+            mutual_costs.append((path_length, node))
 
-        key_tile, min_path = min(mutual_costs)
+        min_path, key_tile = min(mutual_costs)
         self.metrics['path_cost'] = min_path
         self.metrics['nodes_explored'] = len(s_costs) + len(t_costs)
         print('Key tile, min_path:', key_tile, ",", min_path)
@@ -129,11 +129,16 @@ class Search:
             path.append(current)
             current = t_parents[current]
 
+        path.append(self.target)
+
         self.metrics['path_length'] = len(path)
         return path
 
-    def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq):
+    def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq, barrier):
         # Install process barrier from Manager here
+
+        barrier.wait()
+        print('pid {} passed barrier'.format(getpid()))
         open_nodes = pq.PriorityQueue()
         open_nodes.push(source, 0)
 
@@ -146,7 +151,7 @@ class Search:
             # note we're accessing a manager proxy to the list, not the proxy directly
             # process safety isn't just a good idea; it's the LAW.
             mu = mu_list[0]
-            print('mu in thread {}'.format(getpid()), mu)
+
             if priority > mu:
 
                 # If mu has been set to 0 by our partner, we just leave
@@ -201,6 +206,9 @@ class Search:
             # To gather the two final paths determined to contain the right total path
             resultsq = mgr.Queue()
 
+            # To sync thread start
+            barrier = mgr.Barrier(2)
+
             # Even though we're passing the self object, we need to pass source and target in explicitly.
             # This is so that our manager class can reverse them for the backwards search.
             # Otherwise both searches would use the same path
@@ -209,14 +217,16 @@ class Search:
                                                             s_visited,
                                                             t_visited,
                                                             mu_list,
-                                                            resultsq))
+                                                            resultsq,
+                                                            barrier))
 
             t_p = Process(target=self._B_star_runner, args=(self.target,
                                                             self.source,
                                                             t_visited,
                                                             s_visited,
                                                             mu_list,
-                                                            resultsq))
+                                                            resultsq,
+                                                            barrier))
 
             s_p.start()
             t_p.start()
@@ -240,6 +250,10 @@ class Search:
                 t_parents = parents[0]
 
             # Now we need to pass all our information into a function to actual get us a path to return
+            print('received all thread results')
+            print('s thread: {}'.format(s_parents))
+            print('t thread: {}'.format(t_parents))
+            print('intersection:', set(s_parents.keys()) & set(t_parents.keys()))
             self.path = self._splice_path(s_parents, t_parents, s_visited, t_visited)
 
             return self.path
@@ -268,7 +282,7 @@ def test(size, graph_seed, path_seed):
     print('Single Metrics: {}'.format(search.metrics))
     print('Bilat Metrics: {}'.format(b_search.metrics))
 
-    Graph.draw(g, real_solutions)
+    # Graph.draw(g, real_solutions)
 
 
 def main():
