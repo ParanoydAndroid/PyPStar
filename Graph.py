@@ -19,8 +19,6 @@ def get_google_graph():
 
     # we add weights just to make the graph more topologically interesting for project purposes
     add_random_weight(g)
-    nx.set_node_attributes(g, False, 'visited')
-    nx.set_edge_attributes(g, False, 'visited')
 
     return g
 
@@ -37,8 +35,6 @@ def get_random_graph(size, seed=None):
 
     # we add weights just to make the graph more topologically interesting for project purposes
     add_random_weight(g)
-    nx.set_node_attributes(g, False, 'visited')
-    nx.set_edge_attributes(g, False, 'visited')
 
     return g
 

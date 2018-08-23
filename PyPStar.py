@@ -12,6 +12,16 @@ import PriorityQueue as pq
 import Graph
 
 
+def main():
+    size = 36
+    graph_seed = 'Maui1'
+    path_seed = 'Ada1'
+
+    # test(size, graph_seed, path_seed)
+    test_grid_bstar(int(sqrt(size)), graph_seed, path_seed)
+    exit(0)
+
+
 def grid_h(s_node, t_node):
     # Get coords for given nodes
     x0, y0 = s_node
@@ -306,64 +316,110 @@ class Search:
             return self.path
 
 
-def test(size, graph_seed, path_seed):
+def test_google_astar(path_seed):
+    g = Graph.get_google_graph()
+    random.seed(path_seed)
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    search = Search(g, source, target)
+    real_solutions = search.A_star()
+
+    m = search.metrics
+    # This graph is very large, and there's not much point to plotting it, so we just display instead
+    print("Google a_star finished!")
+    print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
+    print('path length: {}, path cost: {}'.format(m[''], m['']))
+    print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['number_visited']))
+    return m['pathfinding_time']
+
+
+def test_google_bstar(path_seed):
+    g = Graph.get_random_graph()
+    random.seed(path_seed)
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    search = Search(g, source, target)
+    real_solutions = search.A_star()
+
+    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+    Graph.draw(g, pos, search.metrics, real_solutions)
+    # Utility to save .png to working dir
+    plot()
+
+    return search.metrics['pathfinding_time']
+
+
+def test_random_astar(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
     source, target = Graph.get_random_node(g), Graph.get_random_node(g)
 
     search = Search(g, source, target)
-    b_search = Search(g, source, target)
-
     real_solutions = search.A_star()
-    bilat_solutions = b_search.bilateral_A_star()
 
-    print('source: ', source)
-    print('target: ', target)
+    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+    Graph.draw(g, pos, search.metrics, real_solutions)
+    # Utility to save .png to working dir
+    plot()
 
-    print('My Single solution: ', real_solutions)
-    print('My grade and life at this moment:', bilat_solutions)
-    print('Graph Size: {}, single vs double size: {} - {}'.format(nx.number_of_nodes(g),
-                                                                  len(real_solutions),
-                                                                  len(bilat_solutions)))
-    print('Single Metrics: {}'.format(search.metrics))
-    print('Bilat Metrics: {}'.format(b_search.metrics))
+    return search.metrics['pathfinding_time']
 
-    # Graph.draw(g, real_solutions)
+def test_random_bstar(size, graph_seed, path_seed):
+    g = Graph.get_random_graph(size, graph_seed)
+    random.seed(path_seed)
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    search = Search(g, source, target)
+    b_path = search.bilateral_A_star()
+
+    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+    Graph.draw(g, pos, search.metrics, b_path)
+    # Utility to save .png to working dir
+    plot()
+
+    return search.metrics['pathfinding_time']
 
 
-def test_grid_bilat(size, graph_seed, path_seed):
+def test_grid_astar(size, graph_seed, path_seed):
     g = Graph.get_grid_graph(size)
     random.seed(path_seed)
     source, target = Graph.get_random_node(g), Graph.get_random_node(g)
     search = Search(g, source, target, grid_h)
 
+    path = search.A_star()
+
+    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+    Graph.draw(g, pos, search.metrics, path)
+    # Utility to save .png to working dir
+    plot()
+
+    return search.metrics['pathfinding time']
+
+
+def test_grid_bstar(size, graph_seed, path_seed):
+    g = Graph.get_grid_graph(size)
+    random.seed(path_seed)
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    search = Search(g, source, target, grid_h)
     b_path = search.bilateral_A_star()
 
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
     Graph.draw(g, pos, search.metrics, b_path)
+    # Utility to save .png to working dir
+    plot()
+
+    return search.metrics['pathfinding_time']
 
 
-
-    Graph.draw(g, pos, b_path)
-
-
+def plot():
+    print('Saving drawn graph to working directory...')
     plt.axis('off')
-
     timestr = time.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
-
-def main():
-    size = 36
-    graph_seed = 'Maui1'
-    path_seed = 'Ada1'
-
-    # test(size, graph_seed, path_seed)
-    test_grid(int(sqrt(size)), graph_seed, path_seed)
-    exit(0)
+    print('Save complete!')
 
 
 if __name__ == '__main__':
-    print("in main:", __name__)
     main()
-else:
-    print("out of main:", __name__)
+
