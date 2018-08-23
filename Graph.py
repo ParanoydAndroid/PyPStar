@@ -45,6 +45,7 @@ def get_random_graph(size, seed=None):
 
 def get_grid_graph(size):
     g = nx.grid_2d_graph(size, size)
+    add_random_weight(g)
 
     return g
 
@@ -61,7 +62,10 @@ def get_barabasi_graph(size, num_edges, seed=None):
     return g
 
 
-def draw(graph: nx.Graph, pos, solution_nodes=()):
+def draw(graph: nx.Graph, pos, metrics: dict, solution_nodes=()):
+    print('Drawing graph... This may take a while')
+    start = time.process_time_ns()
+
     # default types must be immutable, but we want a list to work on
     solution_nodes = list(solution_nodes)
 
@@ -69,25 +73,22 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
     solution_edges = [(solution_nodes[i], solution_nodes[i + 1]) for i in range(len(solution_nodes) - 1)]
 
     goals = [solution_nodes[0], solution_nodes[-1]]
-    goal_labels = {}
-    goal_labels[goals[0]] = 'S'
-    goal_labels[goals[1]] = 'T'
-    print("goals:", goals)
+    goal_labels = {goals[0]: 'S', goals[1]: 'T'}
+    weight_labels = nx.get_edge_attributes(g, 'weight')
 
     # We draw the whole graph with the default color.
     # Then we redraw the path, goal and visited sets using different attributes.
     nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
+    nx.draw_networkx_edge_labels(g, pos, edge_labels=weight_labels, font_size=8)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
-    # visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
-
     visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]
     visited_t_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 't_visited').items() if v]
 
     if not visited_t_nodelist:
-        # There is nothing in the t_noddelist, which tells us we ran a single A*.
-        visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]
+        # There is nothing in the t_nodelist, which tells us we ran a single A*.
+        visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 's_visited').items() if v]
         nx.draw_networkx_nodes(graph, pos, nodelist=visited_s_nodelist, node_color='b', node_size=.5)
         nx.draw_networkx_edges(graph, pos, edgelist=visited_edgelist, edge_color='b', width=1)
     else:
@@ -107,20 +108,15 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
     nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='k', node_size=2)
     nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='k', width=1)
     nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=40)
-
-    # Offset the label position so they aren't directly on the nodes
-    # for p in pos:
-    #     pos[p][1] -= 0.07
     nx.draw_networkx_labels(graph, pos, goal_labels, font_size=10)
 
-    plot.axis('off')
+    metrics['drawing_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
+    write_metrics(g, metrics)
 
-    # TODO: add graph labels: number of nodes, number searched, number in final path, total iterations
 
-    # thank you SO for the timestamp formatting code:
-    # https://stackoverflow.com/questions/10607688/how-to-create-a-file-name-with-the-current-date-time-in-python
-    # timestr = time.strftime("%Y%m%d-%H%M%S")
-    # plot.savefig("figure{}.png".format(timestr), dpi=1500)
+def write_metrics(g, metrics: dict):
+    # Write metrics somewhere on a blank spot on the graph
+    return
 
 
 def get_random_node(g):

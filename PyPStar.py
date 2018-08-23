@@ -44,6 +44,7 @@ class Search:
         self.metrics = {}
 
     def A_star(self):
+        start = time.process_time_ns()
 
         open_nodes = pq.PriorityQueue()
         open_nodes.push(self.source, 0)
@@ -66,7 +67,6 @@ class Search:
 
                 # Setting these node attributes is not necessary for the actual search
                 # but we use these attributes in draw for later analysis
-
                 nx.set_node_attributes(self.graph, {node: {'s_visited': True}})
                 nx.set_edge_attributes(self.graph, {(node, current): {'s_visited': True}})
 
@@ -77,6 +77,7 @@ class Search:
 
                     parents[node] = current
 
+        self.metrics['pathfinding_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
         self.metrics['nodes_explored'] = open_nodes.get_max_count()
         self.path = self._create_path(parents)
 
@@ -101,8 +102,6 @@ class Search:
 
         # After we return from this function, we won't know which search found which elements of the path.
         # So we set that information now while we construct the path.
-
-        # I have no idea how to set the edges at this moment.
         s_visiteds = zip(s_costs.keys(), itertools.repeat({'s_visited': True}))
         t_visiteds = zip(t_costs.keys(), itertools.repeat({'t_visited': True}))
 
@@ -232,6 +231,7 @@ class Search:
 
     def bilateral_A_star(self):
         # using 'with' to ensure shared memory closes after we exit the scope
+        start = time.process_time_ns()
         with Manager() as mgr:
             # {nodeID: cost} dicts so our two branches can share their path information
             s_visited_node_costs = mgr.dict()
@@ -295,15 +295,14 @@ class Search:
 
             # Now we need to pass all our information into a function to actual get us a path to return
             print('Received all thread results.  Beginning to splice final path.')
-            # print('s thread: {}'.format(s_parents))
-            # print('t thread: {}'.format(t_parents))
-            # print('intersection:', set(s_parents.keys()) & set(t_parents.keys()))
             self.path = self._splice_path(s_parents, t_parents, s_visited_node_costs, t_visited_node_costs)
 
             nx.set_edge_attributes(self.graph, visited_edges['s'])
             nx.set_edge_attributes(self.graph, visited_edges['t'])
 
             print('Path successfully spliced')
+
+            self.metrics['pathfinding_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
             return self.path
 
 
@@ -332,31 +331,26 @@ def test(size, graph_seed, path_seed):
     # Graph.draw(g, real_solutions)
 
 
-def test_grid(size, graph_seed, path_seed):
+def test_grid_bilat(size, graph_seed, path_seed):
     g = Graph.get_grid_graph(size)
-    Graph.add_random_weight(g)
-    g2 = Graph.get_random_graph(500, graph_seed)
-    g3 = nx.convert_node_labels_to_integers(g)
     random.seed(path_seed)
     source, target = Graph.get_random_node(g), Graph.get_random_node(g)
     search = Search(g, source, target, grid_h)
 
-    g_path = search.A_star()
     b_path = search.bilateral_A_star()
+
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-    # nx.draw(g, pos, with_labels=True)
+    Graph.draw(g, pos, search.metrics, b_path)
+
+
+
     Graph.draw(g, pos, b_path)
-    labels = nx.get_edge_attributes(g, 'weight')
-    nx.draw_networkx_edge_labels(g, pos, edge_labels=labels, font_size=8)
+
+
     plt.axis('off')
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
-    print('nodes:{}'.format(g.nodes))
-    print('g2 nodes: {}'.format(g2.nodes))
-    print('g3 nodes: {}'.format(g3.nodes))
-    print('path: {}, b_path: {}'.format(g_path, b_path))
-    print('lengths {} - {}'.format(len(g_path), len(b_path)))
 
 def main():
     size = 36
