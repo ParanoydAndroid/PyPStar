@@ -116,10 +116,10 @@ def write_metrics(g, metrics: dict):
     """write metrics information onto the graph figure before returning"""
     m = metrics
 
-    print("Google a_star finished!")
     print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
     print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
     print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
+
 
     return
 
