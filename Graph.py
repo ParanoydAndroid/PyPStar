@@ -81,11 +81,10 @@ def draw(graph: nx.Graph, pos, solution_nodes=()):
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
     # visited_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 'visited').items() if v]
-    #
 
     visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]
     visited_t_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 't_visited').items() if v]
-    visited_both_nodelist = [set(visited_s_nodelist) & set(visited_t_nodelist)]
+    visited_both_nodelist = list(set(visited_s_nodelist) & set(visited_t_nodelist))
 
     if not visited_t_nodelist:
         visited_edgelist = [(a, b) for ((a, b), v) in nx.get_edge_attributes(graph, 'visited').items() if v]

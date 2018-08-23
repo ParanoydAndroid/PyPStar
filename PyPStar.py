@@ -1,3 +1,4 @@
+import itertools
 from math import sqrt
 from multiprocessing import Process, Manager
 import random
@@ -66,13 +67,9 @@ class Search:
                 # Setting these node attributes is not necessary for the actual search
                 # but we use these attributes in draw for later analysis
 
-                # TODO: Change this to a new attribute name
-                nx.set_node_attributes(self.graph, {node: {'visited': True}})
-                nx.set_edge_attributes(self.graph, {(node, current): {'visited': True}})
+                nx.set_node_attributes(self.graph, {node: {'s_visited': True}})
+                nx.set_edge_attributes(self.graph, {(node, current): {'s_visited': True}})
 
-                # this second condition is required for thread-safing
-                # but since we're already rechecking for shorter paths, we no longer need to be concerned
-                # if h(x) is monotonic or not.
                 if node not in g or new_cost < g[node]:
                     g[node] = new_cost
                     priority = new_cost + self.h(node, self.target)
@@ -106,8 +103,12 @@ class Search:
         # So we set that information now while we construct the path.
 
         # I have no idea how to set the edges at this moment.
-        s_visiteds = dict(zip(s_costs.keys(), {'s_visited': True}))
-        t_visiteds = dict(zip(t_costs.keys(), {'t_visited': True}))
+        s_visiteds = zip(s_costs.keys(), itertools.repeat({'s_visited': True}))
+        t_visiteds = zip(t_costs.keys(), itertools.repeat({'t_visited': True}))
+
+        s_visiteds = dict(s_visiteds)
+        t_visiteds = dict(t_visiteds)
+
 
         nx.set_node_attributes(self.graph, s_visiteds)
         nx.set_node_attributes(self.graph, t_visiteds)
@@ -151,16 +152,26 @@ class Search:
         self.metrics['path_length'] = len(path)
         return path
 
-    def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq, barrier):
-        # Install process barrier from Manager here
+    def _B_star_runner(self, source, target, s_visited_node_costs, t_visited_node_costs, mu_list, resultsq, barrier, metrics):
 
+        # Barrier is a special lock that releases only when all member threads call wait (2, in this case).
         barrier.wait()
-        print('pid {} passed barrier'.format(getpid()))
+
+        direction = 'x'
+        if source == self.source:
+            print('process {} started forward search'.format(getpid()))
+            direction = 's'
+        else:
+            print('process {} started reverse search'.format(getpid()))
+            direction = 't'
+
         open_nodes = pq.PriorityQueue()
         open_nodes.push(source, 0)
 
         parents = {source: None}
-        s_visited[source] = 0
+        s_visited_node_costs[source] = 0
+        visited_edges = {}
+        key = '{}_visited'.format(direction)
 
         while not open_nodes.empty():
             priority, current = open_nodes.pop()
@@ -182,30 +193,41 @@ class Search:
                 break
 
             for node in self.graph[current].keys():
-                new_cost = s_visited[current] + self.graph[current][node]['weight']
+                new_cost = s_visited_node_costs[current] + self.graph[current][node]['weight']
 
-                # unlike the single version, the parallel version can't write node attributes (safely, at least)
-                # but since we're passing a list of visited tiles later anyway, we don't need to.
+                # Unlike the single version, the parallel version can't write graph attributes (safely, at least).
+                # So, we write to a local dict and then pass to a shared memory object
+                visited_edges[(node, current)] = {key: True}
 
-                # ensures we only add the cost for the shortest known path to the given node
-                if node not in s_visited or new_cost < s_visited[node]:
-                    s_visited[node] = new_cost
+                # ensures we only add the cost for the shortest known path to the given node.
+                # The second condition is required for thread-safing.
+                # Since we're already rechecking for shorter paths, we no longer need to be concerned
+                # if h(x) is monotonic or not.
+                if node not in s_visited_node_costs or new_cost < s_visited_node_costs[node]:
+                    s_visited_node_costs[node] = new_cost
                     parents[node] = current
 
                     # we only want to add to the frontier if we don't already know the optimal path from
                     # node -> t, which is only the case when our backwards search hasn't touched it yet
                     # this implements the recommendation from Goldberg et al. 2004
-                    if node not in t_visited:
+                    if node not in t_visited_node_costs:
                         priority = new_cost + self.h(node, target)
                         open_nodes.push(node, priority)
                         parents[node] = current
 
                     # if the backwards search *has* touched this node then we need to check if the total path
-                    # cost (=s_visited[node] + t_visited[node] is the shortest known path, and update as appropriate
-                    elif new_cost + t_visited[node] < mu:
-                        mu_list[0] = mu = new_cost + t_visited[node]
+                    # cost is the shortest known path, and update as appropriate
+                    elif new_cost + t_visited_node_costs[node] < mu:
+                        mu_list[0] = mu = new_cost + t_visited_node_costs[node]
 
         resultsq.put(parents)  # blocks
+        metrics[direction] = visited_edges
+
+        if source == self.source:
+            print('process {} finished forward search'.format(getpid()))
+        else:
+            print('process {} finished reverse search'.format(getpid()))
+
         return
 
     def bilateral_A_star(self):
@@ -226,6 +248,9 @@ class Search:
             # To sync thread start
             barrier = mgr.Barrier(2)
 
+            # Again, not necessary for the code, but used later for report and analysis
+            metrics = mgr.dict()
+
             # Even though we're passing the self object, we need to pass source and target in explicitly.
             # This is so that our manager class can reverse them for the backwards search.
             # Otherwise both searches would use the same path
@@ -235,7 +260,8 @@ class Search:
                                                             t_visited,
                                                             mu_list,
                                                             resultsq,
-                                                            barrier))
+                                                            barrier,
+                                                            metrics))
 
             t_p = Process(target=self._B_star_runner, args=(self.target,
                                                             self.source,
@@ -243,7 +269,8 @@ class Search:
                                                             s_visited,
                                                             mu_list,
                                                             resultsq,
-                                                            barrier))
+                                                            barrier,
+                                                            metrics))
 
             s_p.start()
             t_p.start()
@@ -258,7 +285,6 @@ class Search:
                 raise ChildProcessError('Received unexpected number of results: {}: {}'.format(len(parents), parents))
 
             # Now we have to figure out which dict is which
-
             if self.source in parents[0]:
                 s_parents = parents[0]
                 t_parents = parents[1]
@@ -267,12 +293,16 @@ class Search:
                 t_parents = parents[0]
 
             # Now we need to pass all our information into a function to actual get us a path to return
-            print('received all thread results')
-            print('s thread: {}'.format(s_parents))
-            print('t thread: {}'.format(t_parents))
-            print('intersection:', set(s_parents.keys()) & set(t_parents.keys()))
+            print('Received all thread results.  Beginning to splice final path.')
+            # print('s thread: {}'.format(s_parents))
+            # print('t thread: {}'.format(t_parents))
+            # print('intersection:', set(s_parents.keys()) & set(t_parents.keys()))
             self.path = self._splice_path(s_parents, t_parents, s_visited, t_visited)
 
+            nx.set_edge_attributes(self.graph, metrics['s'])
+            nx.set_edge_attributes(self.graph, metrics['t'])
+
+            print('metrics: {}'.format(metrics))
             return self.path
 
 
