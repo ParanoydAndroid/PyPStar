@@ -23,11 +23,9 @@ class Search:
         self.target = target
         self.h = heuristic_func
 
-        # Do I want these in my object?  It feels sort of wrong
-        self.parents = {}
-
-        # map representing g(x) in the standard f(x) = g(x) + h(x) A* cost function.
-        self.g = {}
+        # Used to recreate paths after search is performed.
+        # Each stores the search beginning at source/target respectively.
+        self.path = []
 
         self.metrics = {}
 
@@ -36,14 +34,14 @@ class Search:
         open_nodes = pq.PriorityQueue()
         open_nodes.push(self.source, 0)
 
-        parents = self.parents
+        parents = self.s_parents
         parents[self.source] = None
 
-        g = self.g
-        g[self.source] = 0
+        # Map representing g(x) in the standard f(x) = g(x) + h(x) A* cost function.
+        g = {self.source: 0}
 
         while not open_nodes.empty():
-            current = open_nodes.pop()
+            _, current = open_nodes.pop()
 
             if current == self.target:
                 break
@@ -72,27 +70,31 @@ class Search:
                     parents[node] = current
 
         self.metrics['nodes_explored'] = open_nodes.get_max_count()
+        self.path = self._create_path(parents)
 
-        # TODO: refactor this to return a path to the instance.  Can probably use a parents dict. to allow
-        # create path to figure out what to do, instead of writing two different methods
-        return parents
+        return self.path
 
-    def _create_path(self):
-        # "if self.parents:
+    def _create_path(self, parents: dict):
+        # "if self.s_parents:
         current = self.target
         path = []
 
         while current != self.source:
             path.append(current)
-            current = self.parents[current]
+            current = parents[current]
 
         path.append(self.source)
         path.reverse()
         # error catch some stuff
         return path
 
-    # noinspection PyPep8Naming
-    def _B_star_runner(self, source, target, s_visited, t_visited, mu_list):
+    def _splice_path(self, s_parents, t_parents, s_costs, t_costs):
+        """ Recreates a s->t path from a bilateral search returning dicts of s_parents from s->n and n<-t searches"""
+
+        # There may be many potential paths in our data set.
+        # First we find a jointly touched midpoint for a small path
+
+    def _B_star_runner(self, source, target, s_visited, t_visited, mu_list, resultsq):
         open_nodes = pq.PriorityQueue()
         open_nodes.push(source, 0)
 
@@ -106,7 +108,15 @@ class Search:
             # process safety isn't just a good idea; it's the LAW.
             mu = mu_list[0]
             if priority > mu:
-                # then we have found the shortest path
+
+                # If mu has been set to 0 by our partner, we just leave
+                if 0 == mu:
+                    break
+
+                # We have found the shortest path and we want to break and break our partner as well.
+                # First we'll permanently save the right value then set a poison pill.
+                mu_list[1] = mu_list[0]
+                mu_list[0] = 0
                 break
 
             for node in self.graph[current].keys():
@@ -133,46 +143,67 @@ class Search:
                     elif new_cost + t_visited[node] < mu:
                         mu_list[0] = mu = new_cost + t_visited[node]
 
-        # congrats, you've theoretically found something.  So you need to reconstruct the path now, and
-        # maybe stop the other path from running and ruining everything
+        resultsq.put(parents)  # blocks
+        return
 
-    # noinspection PyPep8Naming
     def bilateral_A_star(self):
         # using 'with' to ensure shared memory closes after we exit the scope
         with Manager() as mgr:
-
             # {nodeID: cost} dicts so our two branches can share their path information
             s_visited = mgr.dict()
             t_visited = mgr.dict()
 
             # manager has to coordinate the shortest expected length of the total path
-            # so we have manager accept candidates, check them, and propagate the current with a queue
             mu = math.inf
             mu_list = mgr.list(mu)
+
+            # To gather the two final paths determined to contain the right total path
+            resultsq = mgr.Queue
 
             # Even though we're passing the self object, we need to pass source and target in explicitly.
             # This is so that our manager class can reverse them for the backwards search.
             # Otherwise both searches would use the same path
-            s_p = Process(target=Search._B_star_runner, args=(self,
-                                                              self.source,
-                                                              self.target,
-                                                              s_visited,
-                                                              t_visited,
-                                                              mu_list))
+            s_p = Process(target=self._B_star_runner, args=(self,
+                                                            self.source,
+                                                            self.target,
+                                                            s_visited,
+                                                            t_visited,
+                                                            mu_list,
+                                                            resultsq))
 
-            t_p = Process(target=Search._B_star_runner, args=(self,
-                                                              self.target,
-                                                              self.source,
-                                                              t_visited,
-                                                              s_visited,
-                                                              mu_list))
+            t_p = Process(target=self._B_star_runner, args=(self,
+                                                            self.target,
+                                                            self.source,
+                                                            t_visited,
+                                                            s_visited,
+                                                            mu_list,
+                                                            resultsq))
 
             s_p.start()
             t_p.start()
             s_p.join()
             t_p.join()
 
-            # do some stuff now that you're done
+            costs = []
+            while not resultsq.empty():
+                costs.append(resultsq.get)  # blocks
+
+            if len(costs) != 2:
+                raise ChildProcessError('Received unexpected number of results: {}: {}'.format(len(costs), costs))
+
+            # Now we have to figure out which dict is which
+
+            if self.source in costs[0]:
+                s_costs = costs[0]
+                t_costs = costs[1]
+            else:
+                s_costs = costs[1]
+                t_costs = costs[0]
+
+            # Now we need to pass all our information into a function to actual get us a path to return
+            self.path = self._splice_path(s_visited, t_visited, s_costs, t_costs)
+
+            return self.path
 
 
 def test(size, graph_seed, path_seed):
@@ -187,7 +218,7 @@ def test(size, graph_seed, path_seed):
     real_solutions = search._create_path()
 
     print('source: ', source)
-    print('target: ',  target)
+    print('target: ', target)
     print('library solution: ', fake_solutions)
     print('My solution: ', real_solutions)
     print('Graph Size:', nx.number_of_nodes(g), 'fake size:', len(fake_solutions), 'real size: ', len(real_solutions))
