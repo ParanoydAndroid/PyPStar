@@ -2,7 +2,6 @@ import random
 import time
 
 import networkx as nx
-import matplotlib.pyplot as plot
 
 
 def main():
@@ -58,25 +57,28 @@ def get_barabasi_graph(size, num_edges, seed=None):
     return g
 
 
-def draw(graph: nx.Graph, pos, metrics: dict, solution_nodes=()):
+def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
+    """draws nx Graph objects in preparation for matplotlib plotting"""
     print('Drawing graph... This may take a while')
     start = time.process_time_ns()
 
-    # default types must be immutable, but we want a list to work on
+    # default types must be immutable, so we need to bookeep metrics and solution nodes
     solution_nodes = list(solution_nodes)
+    if metrics is None:
+        metrics = {}
 
     # edges are just tuples of adjacent nodes, and our solution path by definition stores adjacent nodes
     solution_edges = [(solution_nodes[i], solution_nodes[i + 1]) for i in range(len(solution_nodes) - 1)]
 
     goals = [solution_nodes[0], solution_nodes[-1]]
     goal_labels = {goals[0]: 'S', goals[1]: 'T'}
-    weight_labels = nx.get_edge_attributes(g, 'weight')
+    weight_labels = nx.get_edge_attributes(graph, 'weight')
 
     # We draw the whole graph with the default color.
     # Then we redraw the path, goal and visited sets using different attributes.
     nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
-    nx.draw_networkx_edge_labels(g, pos, edge_labels=weight_labels, font_size=8)
+    nx.draw_networkx_edge_labels(graph, pos, edge_labels=weight_labels, font_size=8)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
     visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]
@@ -104,14 +106,21 @@ def draw(graph: nx.Graph, pos, metrics: dict, solution_nodes=()):
     nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='k', node_size=2)
     nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='k', width=1)
     nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=40)
-    nx.draw_networkx_labels(graph, pos, goal_labels, font_size=10)
+    nx.draw_networkx_labels(graph, pos, goal_labels, font_size=8)
 
     metrics['drawing_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
-    write_metrics(g, metrics)
+    write_metrics(graph, metrics)
 
 
 def write_metrics(g, metrics: dict):
-    # Write metrics somewhere on a blank spot on the graph
+    """write metrics information onto the graph figure before returning"""
+    m = metrics
+
+    print("Google a_star finished!")
+    print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
+    print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
+    print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
+
     return
 
 
@@ -131,15 +140,7 @@ def add_random_weight(g):
 
 
 def test(size, graph_seed, path_seed):
-    g = get_random_graph(size, graph_seed)
-    random.seed(path_seed)
-    source, target = get_random_node(g), get_random_node(g)
-    fake_solutions = nx.astar_path(g, source, target)
-    print('source: ', source)
-    print('target: ',  target)
-    print('solution: ', fake_solutions)
-    print('Graph Size:', nx.number_of_nodes(g), 'solution size:', len(fake_solutions))
-    draw(g, fake_solutions)
+    pass
 
 
 if __name__ == '__main__':
