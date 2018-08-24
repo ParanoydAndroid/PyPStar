@@ -76,8 +76,8 @@ def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
 
     # We draw the whole graph with the default color.
     # Then we redraw the path, goal and visited sets using different attributes.
-    nx.draw_networkx_nodes(graph, pos, node_color='r', node_size=.5)
-    nx.draw_networkx_edges(graph, pos, edge_color='r', width=.5)
+    nx.draw_networkx_nodes(graph, pos, node_color='k', node_size=.5)
+    nx.draw_networkx_edges(graph, pos, edge_color='k', width=.5)
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=weight_labels, font_size=8)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
@@ -103,9 +103,9 @@ def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
         nx.draw_networkx_edges(graph, pos, edgelist=visited_t_edgelist, edge_color='y', width=1)
         nx.draw_networkx_edges(graph, pos, edgelist=visited_both_edgelist, edge_color='g', width=1)
 
-    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='k', node_size=2)
-    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='k', width=1)
-    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=40)
+    nx.draw_networkx_nodes(graph, pos, nodelist=solution_nodes, node_color='r', node_size=2)
+    nx.draw_networkx_edges(graph, pos, edgelist=solution_edges, edge_color='r', width=1)
+    nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='m', node_size=40)
     nx.draw_networkx_labels(graph, pos, goal_labels, font_size=8)
 
     metrics['drawing_time:'] = time.process_time() - start

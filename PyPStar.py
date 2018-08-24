@@ -449,13 +449,27 @@ def plot(metrics):
 
     plt.axis('off')
     plt.title('{}-node Graph with {} search'.format(m['graph_size'], m['search_type']))
-    bottom = -1.25
+    bottom = -1.2
     left = -1.25
+    right = .75
     offset = .075
 
-    plt.text(left, bottom + 2*offset, 'Pathfinding time: {:.2f}'.format(m['pathfinding_time']), fontsize=8)
-    plt.text(left, bottom + offset, 'path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']), fontsize=8)
-    plt.text(left, bottom, 'Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']), fontsize=8)
+    metrics = []
+    metrics.insert(0, 'Pathfinding time: {:.2f}s'.format(m['pathfinding_time']))
+    metrics.insert(0, 'path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
+    metrics.insert(0, 'Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
+
+    for i in range(len(metrics)):
+        plt.text(left, bottom + i * offset, metrics[i], fontsize=7)
+
+    legend = []
+    legend.insert(0, 'blue: forward searched')
+    legend.insert(0, 'yellow: reverse searched')
+    legend.insert(0, 'green: both')
+    legend.insert(0, 'Red: final path')
+
+    for i in range(len(legend)):
+        plt.text(right, bottom + i * offset, legend[i] , fontsize=6)
 
     timestr = t.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
