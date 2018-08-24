@@ -78,7 +78,7 @@ def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
     # Then we redraw the path, goal and visited sets using different attributes.
     nx.draw_networkx_nodes(graph, pos, node_color='k', node_size=.5)
     nx.draw_networkx_edges(graph, pos, edge_color='k', width=.5)
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=weight_labels, font_size=8)
+    # nx.draw_networkx_edge_labels(graph, pos, edge_labels=weight_labels, font_size=8)
 
     # since we've stored 'visited' as a property of nodes, we need to construct a list from that attribute dict
     visited_s_nodelist = [k for (k, v) in nx.get_node_attributes(graph, 's_visited').items() if v]

@@ -14,21 +14,21 @@ import Graph
 
 
 def main():
-    graph_seed = 'Maui1'
-    path_seed = 'Ada1'
+    graph_seed = 'Adawada'
+    path_seed = 'Mauiwowie'
 
-    sizes = [36, 100, 500]
+    sizes = [5000, 10000, 20000]
 
     for size in sizes:
-        a_result = test_grid_astar(int(sqrt(size)), graph_seed)
-        b_result = test_grid_bstar(int(sqrt(size)), graph_seed)
+        a_result = test_grid_astar(int(sqrt(size)),path_seed)
+        b_result = test_grid_bstar(int(sqrt(size)), path_seed)
 
         get_winner(a_result, b_result, size)
 
-        a_result = test_random_astar(size, graph_seed, path_seed)
-        b_result = test_random_bstar(size, graph_seed, path_seed)
-
-        get_winner(a_result, b_result, size)
+        # a_result = test_random_astar(size, graph_seed, path_seed)
+        # b_result = test_random_bstar(size, graph_seed, path_seed)
+        #
+        # get_winner(a_result, b_result, size)
 
     exit(0)
 
@@ -421,8 +421,6 @@ def test_random_bstar(size, graph_seed, path_seed):
     random.seed(path_seed)
     source, target = get_destinations(g)
 
-    print('source = target:', source == target)
-
     search = Search(g, source, target)
     b_path = search.bilateral_A_star()
     m = search.metrics
@@ -448,10 +446,16 @@ def test_grid_astar(size, path_seed):
     m['graph_size'] = size ** 2
     m['search_type'] = 'single'
 
-    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-    Graph.draw(g, pos, m, path)
-    # Utility to save .png to working dir
-    plot(m)
+    if sqrt(20000) - 1:
+        pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+        Graph.draw(g, pos, m, path)
+        # Utility to save .png to working dir
+        plot(m)
+    else:
+        print("Large a_star finished!")
+        print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
+        print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
+        print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
 
     return m['pathfinding_time']
 
@@ -467,10 +471,16 @@ def test_grid_bstar(size, path_seed):
     m['graph_size'] = size ** 2
     m['search_type'] = 'bilateral'
 
-    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-    Graph.draw(g, pos, m, b_path)
-    # Utility to save .png to working dir
-    plot(m)
+    if size < sqrt(20000) - 1:
+        pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+        Graph.draw(g, pos, m, b_path)
+        # Utility to save .png to working dir
+        plot(m)
+    else:
+        print("Large b_star finished!")
+        print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
+        print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
+        print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
 
     return m['pathfinding_time']
 
@@ -508,6 +518,7 @@ def plot(metrics):
     timestr = t.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
     print('Save complete!')
+    plt.close('all')
 
 
 def get_winner(a_result, b_result, size):
