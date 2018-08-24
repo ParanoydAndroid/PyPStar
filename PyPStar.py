@@ -449,9 +449,9 @@ def plot(metrics):
 
     plt.axis('off')
     plt.title('{}-node Graph with {} search'.format(m['graph_size'], m['search_type']))
-    bottom = -1.2
-    left = -1.25
-    right = .75
+    bottom = -1.2  # -1.3
+    left = -1.2  # -1.25
+    right = 1.2  # .7
     offset = .075
 
     metrics = []
@@ -460,7 +460,8 @@ def plot(metrics):
     metrics.insert(0, 'Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
 
     for i in range(len(metrics)):
-        plt.text(left, bottom + i * offset, metrics[i], fontsize=7)
+        plt.text(left, bottom + i * offset, metrics[i],
+                 fontsize=8, horizontalalignment='left', verticalalignment='bottom')
 
     legend = []
     legend.insert(0, 'blue: forward searched')
@@ -469,7 +470,8 @@ def plot(metrics):
     legend.insert(0, 'Red: final path')
 
     for i in range(len(legend)):
-        plt.text(right, bottom + i * offset, legend[i] , fontsize=6)
+        plt.text(right, bottom + i * offset, legend[i] ,
+                 fontsize=6, horizontalalignment='right', verticalalignment='bottom')
 
     timestr = t.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
