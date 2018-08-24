@@ -14,11 +14,22 @@ import Graph
 
 
 def main():
-    size = 36
     graph_seed = 'Maui1'
     path_seed = 'Ada1'
 
-    test_grid_bstar(int(sqrt(size)), graph_seed)
+    sizes = [36, 100, 500]
+
+    for size in sizes:
+        a_result = test_grid_astar(int(sqrt(size)), graph_seed)
+        b_result = test_grid_bstar(int(sqrt(size)), graph_seed)
+
+        get_winner(a_result, b_result, size)
+
+        a_result = test_random_astar(size, graph_seed, path_seed)
+        b_result = test_random_bstar(size, graph_seed, path_seed)
+
+        get_winner(a_result, b_result, size)
+
     exit(0)
 
 
@@ -57,6 +68,7 @@ class Search:
 
     def A_star(self):
         start = t.process_time()
+        print('Beginning single A* search')
 
         open_nodes = pq.PriorityQueue()
         open_nodes.push(self.source, 0)
@@ -89,9 +101,13 @@ class Search:
 
                     parents[node] = current
 
+        self.metrics['path_cost'] = g[self.target]
         self.metrics['pathfinding_time'] = t.process_time() - start
         self.metrics['nodes_explored'] = len(parents)
+
+        print('Single A* search complete!  Building path ...')
         self.path = self._create_path(parents)
+        print('Path sucessfully recreated!')
 
         return self.path
 
@@ -106,6 +122,7 @@ class Search:
 
         path.append(self.source)
         path.reverse()
+        self.metrics['path_length'] = len(path)
 
         return path
 
@@ -249,6 +266,7 @@ class Search:
 
     def bilateral_A_star(self):
         # using 'with' to ensure shared memory closes after we exit the scope
+        print('setting up bilateral A* search ...')
         start = t.process_time()
 
         with Manager() as mgr:
@@ -306,22 +324,24 @@ class Search:
 
             # Now we have to figure out which dict is which, so we check the key for its direction indicator
             if 's' in parents[0]:
+                print('branch1 parents: {}'.format(parents))
                 s_parents = parents[0]['s']
                 t_parents = parents[1]['t']
             elif 't' in parents[0]:
+                print('branch2 parents: {}'.format(parents))
                 s_parents = parents[1]['s']
                 t_parents = parents[0]['t']
             else:
                 raise ChildProcessError('Malformed message, cannot identify owners: {}'.format(parents))
 
             # Now we need to pass all our information into a function to actual get us a path to return
-            print('Received all thread results.  Beginning to splice final path.')
+            print('Received all thread results!  Beginning to splice final path...')
             self.path = self._splice_path(s_parents, t_parents, s_visited_node_costs, t_visited_node_costs)
 
             nx.set_edge_attributes(self.graph, visited_edges['s'])
             nx.set_edge_attributes(self.graph, visited_edges['t'])
 
-            print('Path successfully spliced')
+            print('Path successfully spliced!')
 
             self.metrics['pathfinding_time'] = t.process_time() - start
             return self.path
@@ -330,14 +350,14 @@ class Search:
 def test_google_astar(path_seed):
     g = Graph.get_google_graph()
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
 
     search = Search(g, source, target)
     path = search.A_star()
 
     m = search.metrics
-    m['search_type'] = 'bilateral'
     m['graph_size'] = nx.number_of_nodes(g)
+    m['search_type'] = 'single'
 
     # This graph is very large, and there's not much point to plotting it, so we just display instead
     print("Google a_star finished!")
@@ -351,7 +371,7 @@ def test_google_astar(path_seed):
 def test_google_bstar(path_seed):
     g = Graph.get_google_graph()
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
 
     search = Search(g, source, target)
     b_path = search.A_star()
@@ -369,15 +389,25 @@ def test_google_bstar(path_seed):
     return m['pathfinding_time']
 
 
+def get_destinations(g):
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    while source == target:
+        source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    return source, target
+
+
 def test_random_astar(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
 
     search = Search(g, source, target)
     real_solutions = search.A_star()
     m = search.metrics
     m['graph_size'] = size
+    m['search_type'] = 'single'
 
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
     Graph.draw(g, pos, m, real_solutions)
@@ -390,7 +420,9 @@ def test_random_astar(size, graph_seed, path_seed):
 def test_random_bstar(size, graph_seed, path_seed):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
+
+    print('source = target:', source == target)
 
     search = Search(g, source, target)
     b_path = search.bilateral_A_star()
@@ -409,25 +441,26 @@ def test_random_bstar(size, graph_seed, path_seed):
 def test_grid_astar(size, path_seed):
     g = Graph.get_grid_graph(size)
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
     path = search.A_star()
     m = search.metrics
     m['graph_size'] = size ** 2
+    m['search_type'] = 'single'
 
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
     Graph.draw(g, pos, m, path)
     # Utility to save .png to working dir
     plot(m)
 
-    return m['pathfinding time']
+    return m['pathfinding_time']
 
 
 def test_grid_bstar(size, path_seed):
     g = Graph.get_grid_graph(size)
     random.seed(path_seed)
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+    source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
     b_path = search.bilateral_A_star()
@@ -477,6 +510,18 @@ def plot(metrics):
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
     print('Save complete!')
 
+
+def get_winner(a_result, b_result, size):
+    if a_result < b_result:
+        winner = 'single search'
+        winner_result = a_result
+        loser_result = b_result
+    else:
+        winner = 'bilateral search'
+        winner_result = b_result
+        loser_result = a_result
+
+    print('RESULTS: {} wins, with {:.4f}s execution vs {:.4f}s against {} nodes'.format(winner, winner_result, loser_result, size))
 
 if __name__ == '__main__':
     main()
