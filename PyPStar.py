@@ -324,11 +324,10 @@ class Search:
 
             # Now we have to figure out which dict is which, so we check the key for its direction indicator
             if 's' in parents[0]:
-                print('branch1 parents: {}'.format(parents))
                 s_parents = parents[0]['s']
                 t_parents = parents[1]['t']
+
             elif 't' in parents[0]:
-                print('branch2 parents: {}'.format(parents))
                 s_parents = parents[1]['s']
                 t_parents = parents[0]['t']
             else:
@@ -521,7 +520,11 @@ def get_winner(a_result, b_result, size):
         winner_result = b_result
         loser_result = a_result
 
-    print('RESULTS: {} wins, with {:.4f}s execution vs {:.4f}s against {} nodes'.format(winner, winner_result, loser_result, size))
+    print('RESULTS: {} wins, with {:.4f}s execution vs {:.4f}s against {} nodes ({:.2f}x)'.format(winner,
+                                                                                              winner_result,
+                                                                                              loser_result,
+                                                                                              size,
+                                                                                              loser_result/winner_result))
 
 if __name__ == '__main__':
     main()
