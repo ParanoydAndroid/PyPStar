@@ -60,7 +60,7 @@ def get_barabasi_graph(size, num_edges, seed=None):
 def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
     """draws nx Graph objects in preparation for matplotlib plotting"""
     print('Drawing graph... This may take a while')
-    start = time.process_time_ns()
+    start = time.process_time()
 
     # default types must be immutable, so we need to bookeep metrics and solution nodes
     solution_nodes = list(solution_nodes)
@@ -108,20 +108,7 @@ def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
     nx.draw_networkx_nodes(graph, pos, nodelist=goals, node_color='c', node_size=40)
     nx.draw_networkx_labels(graph, pos, goal_labels, font_size=8)
 
-    metrics['drawing_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
-    write_metrics(graph, metrics)
-
-
-def write_metrics(g, metrics: dict):
-    """write metrics information onto the graph figure before returning"""
-    m = metrics
-
-    print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
-    print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
-    print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
-
-
-    return
+    metrics['drawing_time:'] = time.process_time() - start
 
 
 def get_random_node(g):

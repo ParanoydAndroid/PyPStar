@@ -1,7 +1,7 @@
 # Standard libarary
 import itertools
 import random
-import time
+import time as t
 from math import sqrt
 from multiprocessing import Process, Manager
 from os import getpid
@@ -56,7 +56,7 @@ class Search:
         self.metrics = {}
 
     def A_star(self):
-        start = time.process_time_ns()
+        start = t.process_time()
 
         open_nodes = pq.PriorityQueue()
         open_nodes.push(self.source, 0)
@@ -89,8 +89,8 @@ class Search:
 
                     parents[node] = current
 
-        self.metrics['pathfinding_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
-        self.metrics['nodes_explored'] = open_nodes.get_max_count()
+        self.metrics['pathfinding_time'] = t.process_time() - start
+        self.metrics['nodes_explored'] = len(parents)
         self.path = self._create_path(parents)
 
         return self.path
@@ -137,7 +137,7 @@ class Search:
 
         min_path, key_tile = min(mutual_costs)
         self.metrics['path_cost'] = min_path
-        self.metrics['nodes_explored'] = len(s_costs) + len(t_costs)
+        self.metrics['nodes_explored'] = len(s_touched) + len(t_touched) - len(mutual_set)
 
         path = []
         current = key_tile
@@ -145,7 +145,13 @@ class Search:
             # I don't feel right about appending and reversing the first half of the list, like it might go wrong ...
             # Instead we push in reverse.
             path.insert(0, current)
-            current = s_parents[current]
+            if current in s_parents:
+                current = s_parents[current]
+            else:
+                print('source: {} target: {}'.format(self.source, self.target))
+                print("Sync issue.  source = {}, and current = {}, key tile = {}".format(self.source, current, key_tile))
+                print("parents: {}, path: {}".format(s_parents, path))
+                break
 
         path.insert(0, self.source)
 
@@ -158,6 +164,7 @@ class Search:
         # For small graphs, sometimes one process finds the whole path, so this will end up being redundant
         if path[-1] != self.target:
             path.append(self.target)
+
 
         self.metrics['path_length'] = len(path)
         return path
@@ -230,7 +237,7 @@ class Search:
                     elif new_cost + t_visited_node_costs[node] < mu:
                         mu_list[0] = mu = new_cost + t_visited_node_costs[node]
 
-        resultsq.put(parents)  # blocks
+        resultsq.put({direction: parents})  # blocks
         metrics[direction] = visited_edges
 
         if source == self.source:
@@ -242,7 +249,8 @@ class Search:
 
     def bilateral_A_star(self):
         # using 'with' to ensure shared memory closes after we exit the scope
-        start = time.process_time_ns()
+        start = t.process_time()
+
         with Manager() as mgr:
             # {nodeID: cost} dicts so our two branches can share their path information
             s_visited_node_costs = mgr.dict()
@@ -296,13 +304,15 @@ class Search:
             if len(parents) != 2:
                 raise ChildProcessError('Received unexpected number of results: {}: {}'.format(len(parents), parents))
 
-            # Now we have to figure out which dict is which
-            if self.source in parents[0]:
-                s_parents = parents[0]
-                t_parents = parents[1]
+            # Now we have to figure out which dict is which, so we check the key for its direction indicator
+            if 's' in parents[0]:
+                s_parents = parents[0]['s']
+                t_parents = parents[1]['t']
+            elif 't' in parents[0]:
+                s_parents = parents[1]['s']
+                t_parents = parents[0]['t']
             else:
-                s_parents = parents[1]
-                t_parents = parents[0]
+                raise ChildProcessError('Malformed message, cannot identify owners: {}'.format(parents))
 
             # Now we need to pass all our information into a function to actual get us a path to return
             print('Received all thread results.  Beginning to splice final path.')
@@ -313,7 +323,7 @@ class Search:
 
             print('Path successfully spliced')
 
-            self.metrics['pathfinding_time:'] = (time.process_time_ns() - start) / float(1000000000)  # ns -> s
+            self.metrics['pathfinding_time'] = t.process_time() - start
             return self.path
 
 
@@ -404,7 +414,7 @@ def test_grid_astar(size, path_seed):
     search = Search(g, source, target, grid_h)
     path = search.A_star()
     m = search.metrics
-    m['graph_size'] = size
+    m['graph_size'] = size ** 2
 
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
     Graph.draw(g, pos, m, path)
@@ -422,7 +432,7 @@ def test_grid_bstar(size, path_seed):
     search = Search(g, source, target, grid_h)
     b_path = search.bilateral_A_star()
     m = search.metrics
-    m['graph_size'] = size
+    m['graph_size'] = size ** 2
     m['search_type'] = 'bilateral'
 
     pos = nx.spring_layout(g, iterations=100, weight='i_weight')
@@ -439,9 +449,15 @@ def plot(metrics):
 
     plt.axis('off')
     plt.title('{}-node Graph with {} search'.format(m['graph_size'], m['search_type']))
-    plt.text(0, 0, '{}'.format(m))
+    bottom = -1.25
+    left = -1.25
+    offset = .075
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
+    plt.text(left, bottom + 2*offset, 'Pathfinding time: {:.2f}'.format(m['pathfinding_time']), fontsize=8)
+    plt.text(left, bottom + offset, 'path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']), fontsize=8)
+    plt.text(left, bottom, 'Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']), fontsize=8)
+
+    timestr = t.strftime("%Y%m%d-%H%M%S")
     plt.savefig("figure{}.png".format(timestr), dpi=1500)
     print('Save complete!')
 
