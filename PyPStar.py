@@ -1,6 +1,7 @@
 # Standard libarary
 import itertools
 import random
+import sys
 import time as t
 from math import sqrt
 from multiprocessing import Process, Manager
@@ -12,7 +13,10 @@ import networkx as nx
 import PriorityQueue as pq
 import Graph
 
-Visualize = False  # Used for testing.  Will not draw graphs when set to false.
+if '-v' in sys.argv:
+    Visualize = True  # Set to determine if graphs are drawn and saved.
+else:
+    Visualize = False
 
 
 def main():
