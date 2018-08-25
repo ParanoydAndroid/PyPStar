@@ -27,8 +27,8 @@ def main():
 
         for i in range(20):
             print('Starting test @ graph size: {}'.format(size))
-            a_results.append(test_grid_astar(int(sqrt(size)), path_seed))
-            b_results.append(test_grid_bstar(int(sqrt(size)), path_seed))
+            a_results.append(test_grid_astar(size, path_seed))
+            b_results.append(test_grid_bstar(size, path_seed))
 
             get_winner(a_results[-1], b_results[-1], size)
 
@@ -421,23 +421,22 @@ def test_random_bstar(size, graph_seed, path_seed):
 
 
 def test_grid_astar(size, path_seed):
-    g = Graph.get_grid_graph(size)
+    g = Graph.get_grid_graph(int(sqrt(size)))
     random.seed(path_seed)
     source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
     path = search.A_star()
     m = search.metrics
-    m['graph_size'] = size**2
+    m['graph_size'] = size
     m['search_type'] = 'single'
 
-    _visualize(search, size**2)
+    _visualize(search, size)
     return m['pathfinding_time']
 
 
 def test_grid_bstar(size, path_seed):
-    size = sqrt(size)
-    g = Graph.get_grid_graph(size)
+    g = Graph.get_grid_graph(int(sqrt(size)))
 
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -445,10 +444,10 @@ def test_grid_bstar(size, path_seed):
     search = Search(g, source, target, grid_h)
     b_path = search.bilateral_A_star()
     m = search.metrics
-    m['graph_size'] = size**2
+    m['graph_size'] = size
     m['search_type'] = 'bilateral'
 
-    _visualize(search, size**2)
+    _visualize(search, size)
 
     return m['pathfinding_time']
 
