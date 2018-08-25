@@ -16,8 +16,6 @@ Visualize = False  # Used for testing.  Will not draw graphs when set to false.
 
 
 def main():
-    graph_seed = random.random()
-    path_seed = random.random()
 
     sizes = [100, 500, 1000, 5000, 100000, 500000, 1000000]
 
@@ -26,6 +24,9 @@ def main():
         b_results = []
 
         for i in range(20):
+            graph_seed = None
+            path_seed = None
+
             print('Starting test @ graph size: {}'.format(size))
             a_results.append(test_grid_astar(size, path_seed))
             b_results.append(test_grid_bstar(size, path_seed))
@@ -365,7 +366,7 @@ class Search:
             return self.path
 
 
-def test_google_astar(path_seed):
+def test_google_astar(path_seed=None):
     g = Graph.get_google_graph()
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -381,7 +382,7 @@ def test_google_astar(path_seed):
     return m['pathfinding_time']
 
 
-def test_google_bstar(path_seed):
+def test_google_bstar(path_seed=None):
     g = Graph.get_google_graph()
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -397,7 +398,7 @@ def test_google_bstar(path_seed):
     return m['pathfinding_time']
 
 
-def test_random_astar(size, graph_seed, path_seed):
+def test_random_astar(size, graph_seed=None, path_seed=None):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -412,7 +413,7 @@ def test_random_astar(size, graph_seed, path_seed):
     return m['pathfinding_time']
 
 
-def test_random_bstar(size, graph_seed, path_seed):
+def test_random_bstar(size, graph_seed=None, path_seed=None):
     g = Graph.get_random_graph(size, graph_seed)
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -427,7 +428,7 @@ def test_random_bstar(size, graph_seed, path_seed):
     return m['pathfinding_time']
 
 
-def test_grid_astar(size, path_seed):
+def test_grid_astar(size, path_seed=None):
     g = Graph.get_grid_graph(int(sqrt(size)))
     random.seed(path_seed)
     source, target = get_destinations(g)
@@ -442,7 +443,7 @@ def test_grid_astar(size, path_seed):
     return m['pathfinding_time']
 
 
-def test_grid_bstar(size, path_seed):
+def test_grid_bstar(size, path_seed=None):
     g = Graph.get_grid_graph(int(sqrt(size)))
 
     random.seed(path_seed)
