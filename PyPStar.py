@@ -16,8 +16,8 @@ Visualize = False  # Used for testing.  Will not draw graphs when set to false.
 
 
 def main():
-    graph_seed = 'Adawada'
-    path_seed = 'Mauiwowie'
+    graph_seed = random.random()
+    path_seed = random.random()
 
     sizes = [100, 500, 1000, 5000, 100000, 500000, 1000000]
 
@@ -38,9 +38,13 @@ def main():
             # get_winner(a_result, b_result, size)
         avg_a = sum(a_results) / len(a_results)
         avg_b = sum(b_results) / len(b_results)
+
+        a_results = ['{:.4f}'.format(f) for f in a_results]
+        b_results = ['{:.4f}'.format(f) for f in b_results]
+
         print("A results: {}".format(a_results))
         print('B results: {}'.format(b_results))
-        print('avg A/B at {} nodes: {}s - {}s ({}x)'.format(size, avg_a, avg_b, max(avg_a, avg_b) / min(avg_a, avg_b)))
+        print('avg A/B at {} nodes: {:.4f}s - {:.4f}s ({:.2f}x)'.format(size, avg_a, avg_b, max(avg_a, avg_b) / min(avg_a, avg_b)))
 
     exit(0)
 
@@ -212,17 +216,17 @@ class Search:
             direction = 't'
 
         open_nodes = pq.PriorityQueue()
-        open_nodes.push(source, 0)
 
+        open_nodes.push(source, 0)
         parents = {source: None}
         s_visited_node_costs[source] = 0
+
         visited_edges = {}
         key = '{}_visited'.format(direction)
-
         while not open_nodes.empty():
             priority, current = open_nodes.pop()
 
-            # note we're accessing a manager proxy to the list, not the proxy directly
+            # note we're accessing a manager proxy to the list, not the list directly
             # process safety isn't just a good idea; it's the LAW.
             mu = mu_list[0]
 
@@ -277,6 +281,9 @@ class Search:
         return
 
     def bilateral_A_star(self):
+        """Performs two, modified A* searches, each beginning from one end point of this Search object's graph.
+          Requires multiprocessing support and outperforms A* for graphs > ~40,000 nodes"""
+
         # using 'with' to ensure shared memory closes after we exit the scope
         print('setting up bilateral A* search ...')
         start = t.process_time()
@@ -527,7 +534,7 @@ def _visualize(search, size):
         # Utility to save .png to working dir
         plot(m)
     else:
-        print("Large a_star finished!")
+        print("Large search finished!")
         print('Pathfinding time: {:.4f}'.format(m['pathfinding_time']))
         print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
         print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
