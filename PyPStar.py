@@ -12,23 +12,35 @@ import networkx as nx
 import PriorityQueue as pq
 import Graph
 
+Visualize = False  # Used for testing.  Will not draw graphs when set to false.
+
 
 def main():
     graph_seed = 'Adawada'
     path_seed = 'Mauiwowie'
 
-    sizes = [5000, 10000, 20000]
+    sizes = [100, 500, 1000, 5000, 100000, 500000, 1000000]
 
     for size in sizes:
-        a_result = test_grid_astar(int(sqrt(size)),path_seed)
-        b_result = test_grid_bstar(int(sqrt(size)), path_seed)
+        a_results = []
+        b_results = []
 
-        get_winner(a_result, b_result, size)
+        for i in range(20):
+            print('Starting test @ graph size: {}'.format(size))
+            a_results.append(test_grid_astar(int(sqrt(size)), path_seed))
+            b_results.append(test_grid_bstar(int(sqrt(size)), path_seed))
 
-        # a_result = test_random_astar(size, graph_seed, path_seed)
-        # b_result = test_random_bstar(size, graph_seed, path_seed)
-        #
-        # get_winner(a_result, b_result, size)
+            get_winner(a_results[-1], b_results[-1], size)
+
+            # a_result = test_random_astar(size, graph_seed, path_seed)
+            # b_result = test_random_bstar(size, graph_seed, path_seed)
+            #
+            # get_winner(a_result, b_result, size)
+        avg_a = sum(a_results) / len(a_results)
+        avg_b = sum(b_results) / len(b_results)
+        print("A results: {}".format(a_results))
+        print('B results: {}'.format(b_results))
+        print('avg A/B at {} nodes: {}s - {}s ({}x)'.format(size, avg_a, avg_b, max(avg_a, avg_b) / min(avg_a, avg_b)))
 
     exit(0)
 
@@ -43,7 +55,7 @@ def grid_h(s_node, t_node):
     return abs(x0 - x1) + abs(y0 - y1)
 
 
-def h_djikstra(x, y):
+def h_dijkstra(x, y):
     return 1
 
 
@@ -53,7 +65,7 @@ class Search:
     # because not all graphs are conducive to the same heuristic, we allow the caller to pass their own on instantiation
     # in the event they don't, we have an anonymous constant function that converts the algo to Dijkstra's
     # Passed in heuristic_func must accept two node parameters and must return a number > 0
-    def __init__(self, graph: nx.Graph, source, target, heuristic_func=h_djikstra):
+    def __init__(self, graph: nx.Graph, source, target, heuristic_func=h_dijkstra):
 
         self.graph = graph
         self.source = source
@@ -166,7 +178,8 @@ class Search:
                 current = s_parents[current]
             else:
                 print('source: {} target: {}'.format(self.source, self.target))
-                print("Sync issue.  source = {}, and current = {}, key tile = {}".format(self.source, current, key_tile))
+                print(
+                    "Sync issue.  source = {}, and current = {}, key tile = {}".format(self.source, current, key_tile))
                 print("parents: {}, path: {}".format(s_parents, path))
                 break
 
@@ -181,7 +194,6 @@ class Search:
         # For small graphs, sometimes one process finds the whole path, so this will end up being redundant
         if path[-1] != self.target:
             path.append(self.target)
-
 
         self.metrics['path_length'] = len(path)
         return path
@@ -358,12 +370,7 @@ def test_google_astar(path_seed):
     m['graph_size'] = nx.number_of_nodes(g)
     m['search_type'] = 'single'
 
-    # This graph is very large, and there's not much point to plotting it, so we just display instead
-    print("Google a_star finished!")
-    print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
-    print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
-    print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
-
+    _visualize(search, nx.number_of_nodes(g))
     return m['pathfinding_time']
 
 
@@ -379,22 +386,8 @@ def test_google_bstar(path_seed):
     m['search_type'] = 'bilateral'
     m['graph_size'] = nx.number_of_nodes(g)
 
-    # This graph is very large, and there's not much point to plotting it, so we just display instead
-    print("Google a_star finished!")
-    print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
-    print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
-    print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
-
+    _visualize(search, nx.number_of_nodes(g))
     return m['pathfinding_time']
-
-
-def get_destinations(g):
-    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
-
-    while source == target:
-        source, target = Graph.get_random_node(g), Graph.get_random_node(g)
-
-    return source, target
 
 
 def test_random_astar(size, graph_seed, path_seed):
@@ -408,11 +401,7 @@ def test_random_astar(size, graph_seed, path_seed):
     m['graph_size'] = size
     m['search_type'] = 'single'
 
-    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-    Graph.draw(g, pos, m, real_solutions)
-    # Utility to save .png to working dir
-    plot(m)
-
+    _visualize(search, size)
     return m['pathfinding_time']
 
 
@@ -427,11 +416,7 @@ def test_random_bstar(size, graph_seed, path_seed):
     m['graph_size'] = size
     m['search_type'] = 'bilateral'
 
-    pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-    Graph.draw(g, pos, m, b_path)
-    # Utility to save .png to working dir
-    plot(m)
-
+    _visualize(search, size)
     return m['pathfinding_time']
 
 
@@ -443,50 +428,59 @@ def test_grid_astar(size, path_seed):
     search = Search(g, source, target, grid_h)
     path = search.A_star()
     m = search.metrics
-    m['graph_size'] = size ** 2
+    m['graph_size'] = size**2
     m['search_type'] = 'single'
 
-    if sqrt(20000) - 1:
-        pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-        Graph.draw(g, pos, m, path)
-        # Utility to save .png to working dir
-        plot(m)
-    else:
-        print("Large a_star finished!")
-        print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
-        print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
-        print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
-
+    _visualize(search, size**2)
     return m['pathfinding_time']
 
 
 def test_grid_bstar(size, path_seed):
+    size = sqrt(size)
     g = Graph.get_grid_graph(size)
+
     random.seed(path_seed)
     source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
     b_path = search.bilateral_A_star()
     m = search.metrics
-    m['graph_size'] = size ** 2
+    m['graph_size'] = size**2
     m['search_type'] = 'bilateral'
 
-    if size < sqrt(20000) - 1:
-        pos = nx.spring_layout(g, iterations=100, weight='i_weight')
-        Graph.draw(g, pos, m, b_path)
-        # Utility to save .png to working dir
-        plot(m)
-    else:
-        print("Large b_star finished!")
-        print('Pathfinding time: {.2f}'.format(m['pathfinding_time']))
-        print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
-        print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
+    _visualize(search, size**2)
 
     return m['pathfinding_time']
 
 
+def get_destinations(g):
+    source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    while source == target:
+        source, target = Graph.get_random_node(g), Graph.get_random_node(g)
+
+    return source, target
+
+
+def get_winner(a_result, b_result, size):
+    if a_result < b_result:
+        winner = 'single search'
+        winner_result = a_result
+        loser_result = b_result
+    else:
+        winner = 'bilateral search'
+        winner_result = b_result
+        loser_result = a_result
+
+    print('RESULTS: {} wins, with {:.4f}s execution vs {:.4f}s against {} nodes ({:.2f}x)'.format(winner,
+                                                                                                  winner_result,
+                                                                                                  loser_result,
+                                                                                                  size,
+                                                                                                  loser_result / winner_result))
+
+
 def plot(metrics):
-    print('Saving drawn graph to working directory...')
+    print('Graph drawn!  Saving drawn graph to working directory...')
     m = metrics
 
     plt.axis('off')
@@ -512,7 +506,7 @@ def plot(metrics):
     legend.insert(0, 'Red: final path')
 
     for i in range(len(legend)):
-        plt.text(right, bottom + i * offset, legend[i] ,
+        plt.text(right, bottom + i * offset, legend[i],
                  fontsize=6, horizontalalignment='right', verticalalignment='bottom')
 
     timestr = t.strftime("%Y%m%d-%H%M%S")
@@ -521,21 +515,24 @@ def plot(metrics):
     plt.close('all')
 
 
-def get_winner(a_result, b_result, size):
-    if a_result < b_result:
-        winner = 'single search'
-        winner_result = a_result
-        loser_result = b_result
-    else:
-        winner = 'bilateral search'
-        winner_result = b_result
-        loser_result = a_result
+def _visualize(search, size):
+    m = search.metrics
 
-    print('RESULTS: {} wins, with {:.4f}s execution vs {:.4f}s against {} nodes ({:.2f}x)'.format(winner,
-                                                                                              winner_result,
-                                                                                              loser_result,
-                                                                                              size,
-                                                                                              loser_result/winner_result))
+    if size < 50000 and Visualize:
+        print('Drawing graph... This may take a while')
+        g = search.graph
+        pos = nx.spring_layout(g, iterations=100, weight='i_weight')
+        path = search.path
+
+        Graph.draw(g, pos, m, path)
+        # Utility to save .png to working dir
+        plot(m)
+    else:
+        print("Large a_star finished!")
+        print('Pathfinding time: {:.4f}'.format(m['pathfinding_time']))
+        print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
+        print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
+
 
 if __name__ == '__main__':
     main()

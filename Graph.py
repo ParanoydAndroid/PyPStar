@@ -59,7 +59,6 @@ def get_barabasi_graph(size, num_edges, seed=None):
 
 def draw(graph: nx.Graph, pos, metrics=None, solution_nodes=()):
     """draws nx Graph objects in preparation for matplotlib plotting"""
-    print('Drawing graph... This may take a while')
     start = time.process_time()
 
     # default types must be immutable, so we need to bookeep metrics and solution nodes
