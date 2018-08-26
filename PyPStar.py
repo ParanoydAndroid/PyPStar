@@ -543,7 +543,7 @@ def _visualize(search, size):
         # Utility to save .png to working dir
         plot(m)
     else:
-        print("Large search finished!")
+        print("Large search finished!  Graph was not drawn because it exceeded recommended size")
         print('Pathfinding time: {:.4f}'.format(m['pathfinding_time']))
         print('path length: {}, path cost: {}'.format(m['path_length'], m['path_cost']))
         print('Graph: {} nodes, of which {} were visited'.format(m['graph_size'], m['nodes_explored']))
