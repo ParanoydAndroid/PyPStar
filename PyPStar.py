@@ -1,4 +1,5 @@
 # Standard libarary
+import argparse
 import itertools
 import random
 import sys
@@ -13,21 +14,15 @@ import networkx as nx
 import PriorityQueue as pq
 import Graph
 
-if '-v' in sys.argv:
-    Visualize = True  # Set to determine if graphs are drawn and saved.
-else:
-    Visualize = False
 
+def main(sizes, num_tests, visualize):
 
-def main():
-
-    sizes = [100, 500, 1000, 5000, 100000, 500000, 1000000]
 
     for size in sizes:
         a_results = []
         b_results = []
 
-        for i in range(20):
+        for i in range( num_tests):
             graph_seed = None
             path_seed = None
 
@@ -49,7 +44,8 @@ def main():
 
         print("A results: {}".format(a_results))
         print('B results: {}'.format(b_results))
-        print('avg A/B at {} nodes: {:.4f}s - {:.4f}s ({:.2f}x)'.format(size, avg_a, avg_b, max(avg_a, avg_b) / min(avg_a, avg_b)))
+        print('avg A/B at {} nodes: {:.4f}s - {:.4f}s ({:.2f}x)'.format(size, avg_a, avg_b,
+                                                                        max(avg_a, avg_b) / min(avg_a, avg_b)))
 
     exit(0)
 
@@ -546,4 +542,19 @@ def _visualize(search, size):
 
 
 if __name__ == '__main__':
-    main()
+    sizes_default = [50, 100, 1000, 10000]
+    numTests_default = 5
+    parser = argparse.ArgumentParser(description='parse PyPStar CLI input')
+    parser.add_argument('-v', '--visualize', action='store_true', dest='v', help='Create .png visualizations in '
+                                                                                 'working directory', required=False)
+    parser.add_argument('-s', '--sizes', action='store', dest='s', type=list, default=sizes_default,
+                        help='Requires list argument. Determines the size range over which to run <numTests=5> tests')
+    parser.add_argument('-n', '--numTests', action="store", dest="n", type=int, default=numTests_default,
+                        help='Requires int argument. Determines the number of tests run at each '
+                             '<size=[50, 100, 1000, 10000]>')
+
+    args = parser.parse_args(sys.argv)
+    Visualize = args.v
+    print("args.s, n, v =", args.s, args.n, args.v)
+
+    main(args.s, args.n, args.v)
