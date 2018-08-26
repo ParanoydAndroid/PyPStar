@@ -440,7 +440,8 @@ def test_grid_astar(size, path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
-    path = search.A_star()
+    search.A_star()
+
     m = search.metrics
     m['graph_size'] = size
     m['search_type'] = 'single'
@@ -552,15 +553,17 @@ if __name__ == '__main__':
     sizes_default = [50, 100, 1000, 10000]
     numTests_default = 5
 
-    parser = argparse.ArgumentParser(description='parse PyPStar CLI input')
+    # Capture CLI arguments.  See PyPstar -h for help.
+    parser = argparse.ArgumentParser(description='Create and solve a variety of graphs using A* variants')
     parser.add_argument('-v', '--visualize', action='store_true', dest='v', help='Create .png visualizations in '
                                                                                  'working directory', required=False)
-    parser.add_argument('-s', '--sizes', action='store', dest='s', type=list, default=sizes_default,
-                        help='Requires list argument. Determines the size range over which to run <numTests=5> tests')
+    parser.add_argument('-s', '--sizes', action='store', dest='s', nargs='+', type=int, default=sizes_default,
+                        help='Requires space-delimited int arguments. Determines the size range over which to run'
+                             ' <numTests={}> tests.\nExample: "PyPStar -s 50, 100"'.format(numTests_default))
     parser.add_argument('-n', '--numTests', action="store", dest="n", type=int, default=numTests_default,
                         help='Requires int argument. Determines the number of tests run at each '
-                             '<size=[50, 100, 1000, 10000]>')
+                             '<size={}>.  Example: "PyPStar -n 10"'.format(sizes_default))
 
-    args = parser.parse_args(sys.argv)
+    args = parser.parse_args(sys.argv[1:])
     print("args.s, n, v =", args.s, args.n, args.v)
     main(args.s, args.n, args.v)
