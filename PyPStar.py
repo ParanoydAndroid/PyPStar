@@ -565,5 +565,4 @@ if __name__ == '__main__':
                              '<size={}>.  Example: "PyPStar -n 10"'.format(sizes_default))
 
     args = parser.parse_args(sys.argv[1:])
-    print("args.s, n, v =", args.s, args.n, args.v)
     main(args.s, args.n, args.v)
