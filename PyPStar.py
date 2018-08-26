@@ -15,14 +15,18 @@ import PriorityQueue as pq
 import Graph
 
 
-def main(sizes, num_tests, visualize):
+Visualize = False
 
+
+def main(sizes, num_tests, save_graphs):
+    global Visualize
+    Visualize = save_graphs
 
     for size in sizes:
         a_results = []
         b_results = []
 
-        for i in range( num_tests):
+        for i in range(num_tests):
             graph_seed = None
             path_seed = None
 
@@ -372,7 +376,7 @@ def test_google_astar(path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target)
-    path = search.A_star()
+    search.A_star()
 
     m = search.metrics
     m['graph_size'] = nx.number_of_nodes(g)
@@ -388,7 +392,7 @@ def test_google_bstar(path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target)
-    b_path = search.A_star()
+    search.A_star()
 
     m = search.metrics
     m['search_type'] = 'bilateral'
@@ -404,7 +408,8 @@ def test_random_astar(size, graph_seed=None, path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target)
-    real_solutions = search.A_star()
+    search.A_star()
+
     m = search.metrics
     m['graph_size'] = size
     m['search_type'] = 'single'
@@ -419,7 +424,8 @@ def test_random_bstar(size, graph_seed=None, path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target)
-    b_path = search.bilateral_A_star()
+    search.bilateral_A_star()
+
     m = search.metrics
     m['graph_size'] = size
     m['search_type'] = 'bilateral'
@@ -450,7 +456,8 @@ def test_grid_bstar(size, path_seed=None):
     source, target = get_destinations(g)
 
     search = Search(g, source, target, grid_h)
-    b_path = search.bilateral_A_star()
+    search.bilateral_A_star()
+
     m = search.metrics
     m['graph_size'] = size
     m['search_type'] = 'bilateral'
@@ -544,6 +551,7 @@ def _visualize(search, size):
 if __name__ == '__main__':
     sizes_default = [50, 100, 1000, 10000]
     numTests_default = 5
+
     parser = argparse.ArgumentParser(description='parse PyPStar CLI input')
     parser.add_argument('-v', '--visualize', action='store_true', dest='v', help='Create .png visualizations in '
                                                                                  'working directory', required=False)
@@ -554,7 +562,5 @@ if __name__ == '__main__':
                              '<size=[50, 100, 1000, 10000]>')
 
     args = parser.parse_args(sys.argv)
-    Visualize = args.v
     print("args.s, n, v =", args.s, args.n, args.v)
-
     main(args.s, args.n, args.v)
