@@ -555,8 +555,8 @@ if __name__ == '__main__':
 
     # Capture CLI arguments.  See PyPstar -h for help.
     parser = argparse.ArgumentParser(description='Create and solve a variety of graphs using A* variants')
-    parser.add_argument('-v', '--visualize', action='store_true', dest='v', help='Create .png visualizations in '
-                                                                                 'working directory', required=False)
+    parser.add_argument('-v', '--visualize', action='store_true', dest='v', required=False,
+                        help='Create .png visualizations in working directory as figure[date][time].png')
     parser.add_argument('-s', '--sizes', action='store', dest='s', nargs='+', type=int, default=sizes_default,
                         help='Requires space-delimited int arguments. Determines the size range over which to run'
                              ' <numTests={}> tests.\nExample: "PyPStar -s 50, 100"'.format(numTests_default))
